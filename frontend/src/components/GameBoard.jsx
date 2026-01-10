@@ -241,14 +241,16 @@ export default function GameBoard({ roomData: initialRoomData }) {
       )}
 
       {/* GAME BOARD: 25 WORDS (5x5) - with equal margins and rect (not square) tiles */}
-      <div style={{ flex: 1, padding: 4, display: 'flex', alignItems: 'stretch', justifyContent: 'center', overflow: 'hidden', minHeight: 0 }}>
+      <div style={{ flex: 1, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 0 }}>
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(5, 1fr)',
+            gridAutoRows: 'minmax(auto, 1fr)',
             gap: 4,
             width: '100%',
-            height: '100%',
+            height: 'auto',
+            maxHeight: '50vh',
             maxWidth: '100vw'
           }}
         >
