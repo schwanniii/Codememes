@@ -18,6 +18,11 @@ export default function GameBoard({ roomData }) {
     }
   }, [roomData])
 
+  // Save roomData to localStorage whenever it updates
+  useEffect(() => {
+    localStorage.setItem('currentGameRoom', JSON.stringify(roomData))
+  }, [roomData])
+
   const gameState = roomData.gameState || { currentTeam: 'blue', turn: 'spymaster', words: [] }
   const currentTeam = gameState.currentTeam // 'blue' or 'red'
   const currentTurn = gameState.turn // 'spymaster' or 'guesser'
@@ -46,11 +51,9 @@ export default function GameBoard({ roomData }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: 6, height: 'auto', minHeight: '120px', maxHeight: '140px' }}>
         {/* BLUE TEAM INFO */}
         <div style={{ background: '#e3f2fd', border: '2px solid #1565c0', borderRadius: 6, padding: 10, overflow: 'auto', fontSize: '13px' }}>
-          <div style={{ fontWeight: 700, color: '#0d47a1', marginBottom: 8, textAlign: 'center', fontSize: '14px' }}>🔵 BLAU</div>
-
           {/* Spymasters */}
           <div style={{ marginBottom: 10 }}>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#1565c0' }}>🕵️ Geheimdienstchef</div>
+            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#1565c0' }}>Geheimdienstchef</div>
             <div style={{ background: 'white', border: '1px solid #1565c0', borderRadius: 4, padding: 6, minHeight: '40px' }}>
               {blueSpymasters.length === 0 ? (
                 <div style={{ fontSize: '10px', color: '#999' }}>-</div>
@@ -77,7 +80,7 @@ export default function GameBoard({ roomData }) {
 
           {/* Guessers */}
           <div>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#1565c0' }}>🔍 Ermittler</div>
+            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#1565c0' }}>Ermittler</div>
             <div style={{ background: 'white', border: '1px solid #1565c0', borderRadius: 4, padding: 6, minHeight: '40px' }}>
               {blueGuessers.length === 0 ? (
                 <div style={{ fontSize: '10px', color: '#999' }}>-</div>
@@ -110,11 +113,9 @@ export default function GameBoard({ roomData }) {
 
         {/* RED TEAM INFO */}
         <div style={{ background: '#ffebee', border: '2px solid #c62828', borderRadius: 6, padding: 10, overflow: 'auto', fontSize: '13px' }}>
-          <div style={{ fontWeight: 700, color: '#b71c1c', marginBottom: 8, textAlign: 'center', fontSize: '14px' }}>🔴 ROT</div>
-
           {/* Spymasters */}
           <div style={{ marginBottom: 10 }}>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#c62828' }}>🕵️ Geheimdienstchef</div>
+            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#c62828' }}>Geheimdienstchef</div>
             <div style={{ background: 'white', border: '1px solid #c62828', borderRadius: 4, padding: 6, minHeight: '40px' }}>
               {redSpymasters.length === 0 ? (
                 <div style={{ fontSize: '10px', color: '#999' }}>-</div>
@@ -141,7 +142,7 @@ export default function GameBoard({ roomData }) {
 
           {/* Guessers */}
           <div>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#c62828' }}>🔍 Ermittler</div>
+            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#c62828' }}>Ermittler</div>
             <div style={{ background: 'white', border: '1px solid #c62828', borderRadius: 4, padding: 6, minHeight: '40px' }}>
               {redGuessers.length === 0 ? (
                 <div style={{ fontSize: '10px', color: '#999' }}>-</div>

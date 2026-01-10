@@ -16,7 +16,24 @@ export default function App() {
       .catch((err) => console.error('Video fetch error', err))
   }, [])
 
+  // Restore game session from localStorage on mount
+  useEffect(() => {
+    const savedGameRoom = localStorage.getItem('currentGameRoom')
+    if (savedGameRoom) {
+      try {
+        const roomData = JSON.parse(savedGameRoom)
+        console.log('Restoring game session:', roomData.code)
+        setGameStarted(roomData)
+      } catch (err) {
+        console.error('Failed to restore game session:', err)
+        localStorage.removeItem('currentGameRoom')
+      }
+    }
+  }, [])
+
   function handleGameStart(roomData) {
+    console.log('Game started, saving to localStorage:', roomData.code)
+    localStorage.setItem('currentGameRoom', JSON.stringify(roomData))
     setGameStarted(roomData)
   }
 
