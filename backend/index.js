@@ -87,7 +87,13 @@ io.on('connection', (socket) => {
       code,
       host: socket.id,
       hostName: username || 'Host',
-      players: [{ id: socket.id, username: username || 'Host', isHost: true }],
+      players: [{ 
+        id: socket.id, 
+        username: username || 'Host', 
+        isHost: true,
+        team: null,      // 'red' or 'blue'
+        role: null       // 'spymaster' or 'guesser'
+      }],
       status: 'waiting', // waiting, playing, finished
       gameState: null
     };
@@ -114,7 +120,13 @@ io.on('connection', (socket) => {
       return;
     }
 
-    roomData.players.push({ id: socket.id, username: username || 'Player', isHost: false });
+    roomData.players.push({ 
+      id: socket.id, 
+      username: username || 'Player', 
+      isHost: false,
+      team: null,      // 'red' or 'blue'
+      role: null       // 'spymaster' or 'guesser'
+    });
     socket.join(code);
 
     console.log(`User ${socket.id} joined room ${code}`);
@@ -160,6 +172,28 @@ io.on('connection', (socket) => {
 
     callback({ success: true });
     io.to(code).emit('gameStarted', roomData);
+  });
+
+  socket.on('updatePlayerRole', ({ code, team, role }, callback) => {
+    const roomData = rooms.get(code);
+    if (!roomData) {
+      callback({ success: false, error: 'Room not found' });
+      return;
+    }
+
+    const player = roomData.players.find((p) => p.id === socket.id);
+    if (!player) {
+      callback({ success: false, error: 'Player not in room' });
+      return;
+    }
+
+    player.team = team;
+    player.role = role;
+
+    console.log(`Player ${socket.id} changed role to ${team}-${role}`);
+
+    callback({ success: true });
+    io.to(code).emit('roomUpdated', roomData);
   });
 
   socket.on('disconnect', () => {
