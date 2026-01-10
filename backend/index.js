@@ -134,7 +134,10 @@ io.on('connection', (socket) => {
     console.log(`Room created: ${code} by ${socket.id}`);
 
     callback({ success: true, code, roomData });
-    io.to(code).emit('roomUpdated', roomData);
+    // Broadcast sanitized room (no assignments yet)
+    const safe = JSON.parse(JSON.stringify(roomData));
+    if (safe.gameState) delete safe.gameState.assignments;
+    io.to(code).emit('roomUpdated', safe);
   });
 
   socket.on('joinRoomByCode', ({ code, username }, callback) => {
@@ -162,7 +165,9 @@ io.on('connection', (socket) => {
     console.log(`User ${socket.id} joined room ${code}`);
 
     callback({ success: true, code, roomData });
-    io.to(code).emit('roomUpdated', roomData);
+    const safe = JSON.parse(JSON.stringify(roomData));
+    if (safe.gameState) delete safe.gameState.assignments;
+    io.to(code).emit('roomUpdated', safe);
     io.to(code).emit('systemMessage', { text: `${username} joined the room` });
   });
 
@@ -177,7 +182,9 @@ io.on('connection', (socket) => {
       rooms.delete(code);
       console.log(`Room ${code} deleted (empty)`);
     } else {
-      io.to(code).emit('roomUpdated', roomData);
+      const safe = JSON.parse(JSON.stringify(roomData));
+      if (safe.gameState) delete safe.gameState.assignments;
+      io.to(code).emit('roomUpdated', safe);
       io.to(code).emit('systemMessage', { text: 'A player left' });
     }
   });
@@ -202,18 +209,89 @@ io.on('connection', (socket) => {
 
     const gameWords = selectRandomItems(allWords, 25);
 
+    // Assign teams: randomly choose starting team which gets 9 cards
+    const indices = Array.from({ length: 25 }, (_, i) => i).sort(() => Math.random() - 0.5);
+    const blackIndex = indices.shift();
+    const startingTeam = Math.random() < 0.5 ? 'blue' : 'red';
+    const counts = { blue: startingTeam === 'blue' ? 9 : 8, red: startingTeam === 'red' ? 9 : 8 };
+
+    const assignments = Array(25).fill('neutral');
+    assignments[blackIndex] = 'black';
+
+    // assign starting team
+    for (let i = 0; i < counts[startingTeam]; i++) {
+      const idx = indices.shift();
+      assignments[idx] = startingTeam;
+    }
+
+    // assign other team
+    const other = startingTeam === 'blue' ? 'red' : 'blue';
+    for (let i = 0; i < counts[other]; i++) {
+      const idx = indices.shift();
+      assignments[idx] = other;
+    }
+
+    // remaining are neutral (already set)
+
+    // compute remaining counts
+    const remainingBlue = assignments.filter((a) => a === 'blue').length;
+    const remainingRed = assignments.filter((a) => a === 'red').length;
+
     roomData.status = 'playing';
-    roomData.gameState = { 
-      round: 1, 
-      currentTeam: 'blue', 
+    roomData.gameState = {
+      round: 1,
+      currentTeam: startingTeam,
       turn: 'spymaster',
-      words: gameWords
+      words: gameWords,
+      assignments,
+      revealed: Array(25).fill(false),
+      remaining: { blue: remainingBlue, red: remainingRed }
     };
 
-    console.log(`Game started in room ${code}`);
+    console.log(`Game started in room ${code}. Starting team: ${startingTeam}`);
 
     callback({ success: true });
-    io.to(code).emit('gameStarted', roomData);
+    // Broadcast sanitized gameStarted (remove assignments)
+    const safeRoom = JSON.parse(JSON.stringify(roomData));
+    if (safeRoom.gameState) delete safeRoom.gameState.assignments;
+    io.to(code).emit('gameStarted', safeRoom);
+
+    // Send assignments privately to spymasters
+    const spies = roomData.players.filter((p) => p.role === 'spymaster');
+    spies.forEach((s) => {
+      io.to(s.id).emit('spymasterAssignments', { assignments: roomData.gameState.assignments });
+    });
+  });
+
+  // Reveal word event
+  socket.on('revealWord', ({ code, index }, callback) => {
+    const roomData = rooms.get(code);
+    if (!roomData || !roomData.gameState) {
+      if (callback) callback({ success: false, error: 'Room or game not found' });
+      return;
+    }
+
+    const gs = roomData.gameState;
+    if (gs.revealed[index]) {
+      if (callback) callback({ success: false, error: 'Already revealed' });
+      return;
+    }
+
+    gs.revealed[index] = true;
+    const assign = gs.assignments[index];
+    if (assign === 'blue') gs.remaining.blue = Math.max(0, gs.remaining.blue - 1);
+    if (assign === 'red') gs.remaining.red = Math.max(0, gs.remaining.red - 1);
+
+    // If black revealed -> game over
+    if (assign === 'black') {
+      roomData.status = 'finished';
+      io.to(code).emit('systemMessage', { text: 'Assassin revealed! Game over.' });
+    }
+
+    const safeRoom = JSON.parse(JSON.stringify(roomData));
+    if (safeRoom.gameState) delete safeRoom.gameState.assignments;
+    io.to(code).emit('roomUpdated', safeRoom);
+    if (callback) callback({ success: true });
   });
 
   socket.on('updatePlayerRole', ({ code, team, role }, callback) => {
@@ -235,7 +313,9 @@ io.on('connection', (socket) => {
     console.log(`Player ${socket.id} changed role to ${team}-${role}`);
 
     callback({ success: true });
-    io.to(code).emit('roomUpdated', roomData);
+    const safe = JSON.parse(JSON.stringify(roomData));
+    if (safe.gameState) delete safe.gameState.assignments;
+    io.to(code).emit('roomUpdated', safe);
   });
 
   socket.on('disconnect', () => {
@@ -254,7 +334,9 @@ io.on('connection', (socket) => {
           roomData.host = roomData.players[0].id;
           roomData.players[0].isHost = true;
         }
-        io.to(code).emit('roomUpdated', roomData);
+        const safe = JSON.parse(JSON.stringify(roomData));
+        if (safe.gameState) delete safe.gameState.assignments;
+        io.to(code).emit('roomUpdated', safe);
         io.to(code).emit('systemMessage', { text: 'A player disconnected' });
       }
     }

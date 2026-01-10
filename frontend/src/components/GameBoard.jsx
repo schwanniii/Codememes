@@ -1,34 +1,63 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
+import { io } from 'socket.io-client'
 
-export default function GameBoard({ roomData }) {
-  const [words, setWords] = useState([])
-  const [loading, setLoading] = useState(true)
+const SERVER = import.meta.env.VITE_SOCKET_URL || window.location.origin
+
+export default function GameBoard({ roomData: initialRoomData }) {
+  const [roomData, setRoomData] = useState(initialRoomData || null)
+  const [loading, setLoading] = useState(!initialRoomData)
+  const [spymasterAssignments, setSpymasterAssignments] = useState(null)
+  const socketRef = useRef(null)
 
   useEffect(() => {
-    // Use words from gameState (shared across all players)
-    if (roomData.gameState && roomData.gameState.words) {
-      setWords(
-        roomData.gameState.words.map((w, i) => ({
-          id: i,
-          word: w,
-          revealed: false
-        }))
-      )
+    const socket = io(SERVER)
+    socketRef.current = socket
+
+    // Try to rejoin using saved room code and username
+    const savedCode = (initialRoomData && initialRoomData.code) || localStorage.getItem('currentRoomCode')
+    const savedUsername = localStorage.getItem('username')
+    if (savedCode && savedUsername) {
+      socket.emit('joinRoomByCode', { code: savedCode, username: savedUsername }, ({ success, code, roomData: rd, error }) => {
+        if (success) {
+          setRoomData(rd)
+          setLoading(false)
+        } else {
+          console.warn('Failed to rejoin room:', error)
+          setLoading(false)
+        }
+      })
+    } else if (initialRoomData) {
       setLoading(false)
     }
-  }, [roomData])
 
-  // Save roomData to localStorage whenever it updates
-  useEffect(() => {
-    localStorage.setItem('currentGameRoom', JSON.stringify(roomData))
-  }, [roomData])
+    socket.on('roomUpdated', (rd) => {
+      setRoomData(rd)
+      localStorage.setItem('currentGameRoom', JSON.stringify(rd))
+    })
+
+    socket.on('spymasterAssignments', ({ assignments }) => {
+      setSpymasterAssignments(assignments)
+    })
+
+    socket.on('systemMessage', (m) => {
+      console.log('System:', m.text)
+    })
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [initialRoomData])
+
+  if (loading || !roomData) {
+    return <div style={{ padding: 16, textAlign: 'center' }}>Loading game...</div>
+  }
 
   const gameState = roomData.gameState || { currentTeam: 'blue', turn: 'spymaster', words: [] }
   const currentTeam = gameState.currentTeam // 'blue' or 'red'
   const currentTurn = gameState.turn // 'spymaster' or 'guesser'
 
-  const redPlayers = roomData.players.filter((p) => p.team === 'red')
-  const bluePlayers = roomData.players.filter((p) => p.team === 'blue')
+  const redPlayers = (roomData.players || []).filter((p) => p.team === 'red')
+  const bluePlayers = (roomData.players || []).filter((p) => p.team === 'blue')
 
   const redSpymasters = redPlayers.filter((p) => p.role === 'spymaster')
   const redGuessers = redPlayers.filter((p) => p.role === 'guesser')
@@ -41,20 +70,28 @@ export default function GameBoard({ roomData }) {
       ? `${currentTeamLabel} Geheimdienstchef: Gib deinen Ermittlern einen Hinweis`
       : `${currentTeamLabel} Ermittler: Ratet basierend auf dem Hinweis`
 
-  if (loading) {
-    return <div style={{ padding: 16, textAlign: 'center' }}>Loading game...</div>
+  // helper to leave
+  const handleMenuLeave = () => {
+    if (!roomData || !roomData.code) return
+    const sock = socketRef.current
+    if (sock) {
+      sock.emit('leaveRoomByCode', { code: roomData.code })
+    }
+    localStorage.removeItem('currentRoomCode')
+    localStorage.removeItem('currentGameRoom')
+    window.location.reload()
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f5f5', fontFamily: 'sans-serif', overflow: 'hidden' }}>
       {/* TOP ROW: 3 equal boxes (Blue Info | Spacer | Red Info) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: 6, height: 'auto', minHeight: '120px', maxHeight: '140px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: 6, height: 'auto', minHeight: '72px', maxHeight: '120px' }}>
         {/* BLUE TEAM INFO */}
         <div style={{ background: '#e3f2fd', border: '2px solid #1565c0', borderRadius: 6, padding: 10, overflow: 'auto', fontSize: '13px' }}>
           {/* Spymasters */}
-          <div style={{ marginBottom: 10 }}>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#1565c0' }}>Geheimdienstchef</div>
-            <div style={{ background: 'white', border: '1px solid #1565c0', borderRadius: 4, padding: 6, minHeight: '40px' }}>
+          <div style={{ marginBottom: 6 }}>
+            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#1565c0' }}>Geheimdienstchefs</div>
+            <div style={{ background: 'white', border: '1px solid #1565c0', borderRadius: 4, padding: 6, minHeight: '28px' }}>
               {blueSpymasters.length === 0 ? (
                 <div style={{ fontSize: '10px', color: '#999' }}>-</div>
               ) : (
@@ -81,7 +118,7 @@ export default function GameBoard({ roomData }) {
           {/* Guessers */}
           <div>
             <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#1565c0' }}>Ermittler</div>
-            <div style={{ background: 'white', border: '1px solid #1565c0', borderRadius: 4, padding: 6, minHeight: '40px' }}>
+            <div style={{ background: 'white', border: '1px solid #1565c0', borderRadius: 4, padding: 6, minHeight: '28px' }}>
               {blueGuessers.length === 0 ? (
                 <div style={{ fontSize: '10px', color: '#999' }}>-</div>
               ) : (
@@ -114,9 +151,9 @@ export default function GameBoard({ roomData }) {
         {/* RED TEAM INFO */}
         <div style={{ background: '#ffebee', border: '2px solid #c62828', borderRadius: 6, padding: 10, overflow: 'auto', fontSize: '13px' }}>
           {/* Spymasters */}
-          <div style={{ marginBottom: 10 }}>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#c62828' }}>Geheimdienstchef</div>
-            <div style={{ background: 'white', border: '1px solid #c62828', borderRadius: 4, padding: 6, minHeight: '40px' }}>
+          <div style={{ marginBottom: 6 }}>
+            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#c62828' }}>Geheimdienstchefs</div>
+            <div style={{ background: 'white', border: '1px solid #c62828', borderRadius: 4, padding: 6, minHeight: '28px' }}>
               {redSpymasters.length === 0 ? (
                 <div style={{ fontSize: '10px', color: '#999' }}>-</div>
               ) : (
@@ -143,7 +180,7 @@ export default function GameBoard({ roomData }) {
           {/* Guessers */}
           <div>
             <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#c62828' }}>Ermittler</div>
-            <div style={{ background: 'white', border: '1px solid #c62828', borderRadius: 4, padding: 6, minHeight: '40px' }}>
+            <div style={{ background: 'white', border: '1px solid #c62828', borderRadius: 4, padding: 6, minHeight: '28px' }}>
               {redGuessers.length === 0 ? (
                 <div style={{ fontSize: '10px', color: '#999' }}>-</div>
               ) : (
@@ -167,6 +204,18 @@ export default function GameBoard({ roomData }) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* SMALL TOP COUNTERS / MENU */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: '6px 10px' }}>
+        <div style={{ textAlign: 'left', fontWeight: 700, color: '#226' }}>Blue: {gameState.remaining?.blue ?? 0}</div>
+        <div style={{ textAlign: 'center' }}>
+          <select onChange={(e) => { if (e.target.value === 'leave') handleMenuLeave(); }}>
+            <option>Menu</option>
+            <option value="leave">Leave to Lobby</option>
+          </select>
+        </div>
+        <div style={{ textAlign: 'right', fontWeight: 700, color: '#a22' }}>Red: {gameState.remaining?.red ?? 0}</div>
       </div>
 
       {/* HINT BOX */}
@@ -199,49 +248,69 @@ export default function GameBoard({ roomData }) {
             maxWidth: '100vw'
           }}
         >
-          {words.map((wordObj) => (
-            <div
-              key={wordObj.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: wordObj.revealed ? '#bbb' : '#fff',
-                border: '2px solid #333',
-                borderRadius: 3,
-                padding: 2,
-                cursor: wordObj.revealed ? 'default' : 'pointer',
-                fontWeight: 600,
-                fontSize: 'clamp(9px, 1.8vw, 13px)',
-                textAlign: 'center',
-                opacity: wordObj.revealed ? 0.5 : 1,
-                transition: 'all 0.15s',
-                userSelect: 'none',
-                overflow: 'hidden',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                wordBreak: 'break-word',
-                whiteSpace: 'normal',
-                lineHeight: '1.2'
-              }}
-              onClick={() => {
-                if (!wordObj.revealed) {
-                  setWords((prev) =>
-                    prev.map((w) => (w.id === wordObj.id ? { ...w, revealed: true } : w))
-                  )
-                }
-              }}
-            >
-              {wordObj.word}
-            </div>
-          ))}
+          {(gameState.words || []).map((w, i) => {
+            const revealed = gameState.revealed?.[i]
+            const assignment = spymasterAssignments ? spymasterAssignments[i] : null
+            const isSpymaster = (roomData.players || []).find((p) => p.id === socketRef.current.id)?.role === 'spymaster'
+            const bg = revealed ? (gameState.assignments?.[i] === 'blue' ? '#aee' : gameState.assignments?.[i] === 'red' ? '#fdd' : gameState.assignments?.[i] === 'black' ? '#000' : '#efe6d6') : '#fff'
+
+            return (
+              <div
+                key={i}
+                onClick={() => {
+                  if (!revealed) {
+                    socketRef.current.emit('revealWord', { code: roomData.code, index: i }, (res) => {
+                      // noop
+                    })
+                  }
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: revealed ? bg : '#fff',
+                  border: '2px solid #333',
+                  borderRadius: 3,
+                  padding: 6,
+                  height: 72,
+                  cursor: revealed ? 'default' : 'pointer',
+                  fontWeight: 600,
+                  fontSize: 'clamp(10px, 2.2vw, 14px)',
+                  textAlign: 'center',
+                  opacity: revealed ? 0.6 : 1,
+                  transition: 'all 0.15s',
+                  userSelect: 'none',
+                  overflow: 'hidden',
+                  wordBreak: 'break-word',
+                  whiteSpace: 'normal',
+                  lineHeight: '1.2',
+                  position: 'relative'
+                }}
+              >
+                <div>{w}</div>
+                {isSpymaster && !revealed && assignment && (
+                  <div style={{ position: 'absolute', top: 6, right: 6, fontSize: 11, padding: '2px 6px', background: 'rgba(0,0,0,0.06)', borderRadius: 4 }}>
+                    {assignment}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 
       {/* BOTTOM AREA - PLACEHOLDER FOR FUTURE FEATURES */}
       <div style={{ minHeight: '80px', background: '#fff', borderTop: '1px solid #ddd', padding: 8 }}>
-        {/* Hier kommt später mehr rein */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ color: '#226', fontWeight: 700 }}>Blue remaining: {gameState.remaining?.blue ?? 0}</div>
+          <div>
+            <select onChange={(e) => { if (e.target.value === 'leave') handleMenuLeave(); }}>
+              <option>Menu</option>
+              <option value="leave">Leave to Lobby</option>
+            </select>
+          </div>
+          <div style={{ color: '#a22', fontWeight: 700 }}>Red remaining: {gameState.remaining?.red ?? 0}</div>
+        </div>
       </div>
     </div>
   )
