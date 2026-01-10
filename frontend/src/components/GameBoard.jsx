@@ -43,7 +43,7 @@ export default function GameBoard({ roomData }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f5f5', fontFamily: 'sans-serif', overflow: 'hidden' }}>
       {/* TOP ROW: 3 equal boxes (Blue Info | Spacer | Red Info) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, padding: 8, height: 'auto', minHeight: '180px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: 6, height: 'auto', minHeight: '120px', maxHeight: '140px' }}>
         {/* BLUE TEAM INFO */}
         <div style={{ background: '#e3f2fd', border: '2px solid #1565c0', borderRadius: 6, padding: 10, overflow: 'auto', fontSize: '13px' }}>
           <div style={{ fontWeight: 700, color: '#0d47a1', marginBottom: 8, textAlign: 'center', fontSize: '14px' }}>🔵 BLAU</div>
@@ -171,26 +171,27 @@ export default function GameBoard({ roomData }) {
       {/* HINT BOX */}
       <div
         style={{
-          padding: 12,
+          padding: 8,
           background: currentTeam === 'blue' ? '#e3f2fd' : '#ffebee',
-          borderBottom: `4px solid ${currentTeam === 'blue' ? '#1565c0' : '#c62828'}`,
+          borderBottom: `3px solid ${currentTeam === 'blue' ? '#1565c0' : '#c62828'}`,
           textAlign: 'center',
           color: currentTeam === 'blue' ? '#0d47a1' : '#b71c1c',
           fontWeight: 600,
-          fontSize: '14px',
-          margin: '4px'
+          fontSize: '12px',
+          margin: '3px',
+          lineHeight: '1.3'
         }}
       >
         {hintText}
       </div>
 
       {/* GAME BOARD: 25 WORDS (5x5 SQUARE) */}
-      <div style={{ flex: 1, padding: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <div style={{ flex: 1, padding: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 0 }}>
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: 6,
+            gap: 4,
             width: '100%',
             height: '100%',
             aspectRatio: '1',
@@ -206,18 +207,22 @@ export default function GameBoard({ roomData }) {
                 justifyContent: 'center',
                 background: wordObj.revealed ? '#bbb' : '#fff',
                 border: '2px solid #333',
-                borderRadius: 4,
-                padding: 4,
+                borderRadius: 3,
+                padding: 2,
                 cursor: wordObj.revealed ? 'default' : 'pointer',
                 fontWeight: 600,
-                fontSize: 'clamp(10px, 2.2vw, 14px)',
+                fontSize: 'clamp(9px, 1.8vw, 13px)',
                 textAlign: 'center',
                 opacity: wordObj.revealed ? 0.5 : 1,
                 transition: 'all 0.15s',
                 userSelect: 'none',
                 overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                wordBreak: 'break-word',
+                whiteSpace: 'normal',
+                lineHeight: '1.2'
               }}
               onClick={() => {
                 if (!wordObj.revealed) {
@@ -231,6 +236,11 @@ export default function GameBoard({ roomData }) {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* BOTTOM AREA - PLACEHOLDER FOR FUTURE FEATURES */}
+      <div style={{ minHeight: '80px', background: '#fff', borderTop: '1px solid #ddd', padding: 8 }}>
+        {/* Hier kommt später mehr rein */}
       </div>
     </div>
   )

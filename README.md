@@ -1,5 +1,16 @@
 # Codenames — Mini Demo
 
+In alleBegriffe.txt:
+- Schwanni (Z. 399)
+- Maris (Z. 255)
+- Ben (Z. 34)
+- Jacob (Z. 178)
+- Johnny (Z. 182)
+- Simon (Z. 408)
+- Tim-Oke (Z. 456)
+- Frerik (Z. 119)
+
+
 Dies ist ein Minimal-Scaffold für eine Codenames-ähnliche Web-App mit einer Video-Picker-Demo.
 
 Struktur:
