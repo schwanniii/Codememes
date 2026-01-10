@@ -5,20 +5,20 @@ export default function GameBoard({ roomData }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Fetch 25 random words
-    fetch('/api/game/words')
-      .then((res) => res.json())
-      .then((data) => {
-        setWords(data.words.map((w, i) => ({ id: i, word: w, revealed: false })))
-        setLoading(false)
-      })
-      .catch((err) => {
-        console.error('Error loading words:', err)
-        setLoading(false)
-      })
-  }, [])
+    // Use words from gameState (shared across all players)
+    if (roomData.gameState && roomData.gameState.words) {
+      setWords(
+        roomData.gameState.words.map((w, i) => ({
+          id: i,
+          word: w,
+          revealed: false
+        }))
+      )
+      setLoading(false)
+    }
+  }, [roomData])
 
-  const gameState = roomData.gameState || { currentTeam: 'blue', turn: 'spymaster' }
+  const gameState = roomData.gameState || { currentTeam: 'blue', turn: 'spymaster', words: [] }
   const currentTeam = gameState.currentTeam // 'blue' or 'red'
   const currentTurn = gameState.turn // 'spymaster' or 'guesser'
 
@@ -30,21 +30,145 @@ export default function GameBoard({ roomData }) {
   const blueSpymasters = bluePlayers.filter((p) => p.role === 'spymaster')
   const blueGuessers = bluePlayers.filter((p) => p.role === 'guesser')
 
-  // Current hint text
-  const isMyTurn = currentTurn === 'spymaster'
   const currentTeamLabel = currentTeam === 'blue' ? 'Blau' : 'Rot'
   const hintText =
     currentTurn === 'spymaster'
       ? `${currentTeamLabel} Geheimdienstchef: Gib deinen Ermittlern einen Hinweis`
-      : `${currentTeamLabel} Ermittler: Rätet basierend auf dem Hinweis`
+      : `${currentTeamLabel} Ermittler: Ratet basierend auf dem Hinweis`
 
   if (loading) {
     return <div style={{ padding: 16, textAlign: 'center' }}>Loading game...</div>
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f5f5', overflow: 'hidden' }}>
-      {/* Hint Box */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f5f5', fontFamily: 'sans-serif', overflow: 'hidden' }}>
+      {/* TOP ROW: 3 equal boxes (Blue Info | Spacer | Red Info) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, padding: 8, height: 'auto', minHeight: '180px' }}>
+        {/* BLUE TEAM INFO */}
+        <div style={{ background: '#e3f2fd', border: '2px solid #1565c0', borderRadius: 6, padding: 10, overflow: 'auto', fontSize: '13px' }}>
+          <div style={{ fontWeight: 700, color: '#0d47a1', marginBottom: 8, textAlign: 'center', fontSize: '14px' }}>🔵 BLAU</div>
+
+          {/* Spymasters */}
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#1565c0' }}>🕵️ Geheimdienstchef</div>
+            <div style={{ background: 'white', border: '1px solid #1565c0', borderRadius: 4, padding: 6, minHeight: '40px' }}>
+              {blueSpymasters.length === 0 ? (
+                <div style={{ fontSize: '10px', color: '#999' }}>-</div>
+              ) : (
+                blueSpymasters.map((p) => (
+                  <div
+                    key={p.id}
+                    style={{
+                      padding: '3px 4px',
+                      marginBottom: '2px',
+                      background: '#1565c0',
+                      color: 'white',
+                      borderRadius: 2,
+                      fontSize: '10px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {p.username}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Guessers */}
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#1565c0' }}>🔍 Ermittler</div>
+            <div style={{ background: 'white', border: '1px solid #1565c0', borderRadius: 4, padding: 6, minHeight: '40px' }}>
+              {blueGuessers.length === 0 ? (
+                <div style={{ fontSize: '10px', color: '#999' }}>-</div>
+              ) : (
+                blueGuessers.map((p) => (
+                  <div
+                    key={p.id}
+                    style={{
+                      padding: '3px 4px',
+                      marginBottom: '2px',
+                      background: '#90caf9',
+                      color: '#0d47a1',
+                      borderRadius: 2,
+                      fontSize: '10px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {p.username}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* CENTER SPACER */}
+        <div style={{ background: '#fff', border: '2px solid #ccc', borderRadius: 6, padding: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center', color: '#999', fontSize: '12px' }}>Codenames</div>
+        </div>
+
+        {/* RED TEAM INFO */}
+        <div style={{ background: '#ffebee', border: '2px solid #c62828', borderRadius: 6, padding: 10, overflow: 'auto', fontSize: '13px' }}>
+          <div style={{ fontWeight: 700, color: '#b71c1c', marginBottom: 8, textAlign: 'center', fontSize: '14px' }}>🔴 ROT</div>
+
+          {/* Spymasters */}
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#c62828' }}>🕵️ Geheimdienstchef</div>
+            <div style={{ background: 'white', border: '1px solid #c62828', borderRadius: 4, padding: 6, minHeight: '40px' }}>
+              {redSpymasters.length === 0 ? (
+                <div style={{ fontSize: '10px', color: '#999' }}>-</div>
+              ) : (
+                redSpymasters.map((p) => (
+                  <div
+                    key={p.id}
+                    style={{
+                      padding: '3px 4px',
+                      marginBottom: '2px',
+                      background: '#c62828',
+                      color: 'white',
+                      borderRadius: 2,
+                      fontSize: '10px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {p.username}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Guessers */}
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#c62828' }}>🔍 Ermittler</div>
+            <div style={{ background: 'white', border: '1px solid #c62828', borderRadius: 4, padding: 6, minHeight: '40px' }}>
+              {redGuessers.length === 0 ? (
+                <div style={{ fontSize: '10px', color: '#999' }}>-</div>
+              ) : (
+                redGuessers.map((p) => (
+                  <div
+                    key={p.id}
+                    style={{
+                      padding: '3px 4px',
+                      marginBottom: '2px',
+                      background: '#ef9a9a',
+                      color: '#b71c1c',
+                      borderRadius: 2,
+                      fontSize: '10px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {p.username}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* HINT BOX */}
       <div
         style={{
           padding: 12,
@@ -53,220 +177,59 @@ export default function GameBoard({ roomData }) {
           textAlign: 'center',
           color: currentTeam === 'blue' ? '#0d47a1' : '#b71c1c',
           fontWeight: 600,
-          fontSize: '14px'
+          fontSize: '14px',
+          margin: '4px'
         }}
       >
         {hintText}
       </div>
 
-      {/* Main Game Area */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* LEFT TEAM (BLUE) */}
+      {/* GAME BOARD: 25 WORDS (5x5 SQUARE) */}
+      <div style={{ flex: 1, padding: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         <div
           style={{
-            width: '18%',
-            background: '#e3f2fd',
-            borderRight: '2px solid #1565c0',
-            padding: 8,
-            overflow: 'auto',
-            fontSize: '12px'
+            display: 'grid',
+            gridTemplateColumns: 'repeat(5, 1fr)',
+            gap: 6,
+            width: '100%',
+            height: '100%',
+            aspectRatio: '1',
+            maxWidth: '100vw'
           }}
         >
-          <div style={{ fontWeight: 600, color: '#0d47a1', marginBottom: 8, textAlign: 'center' }}>🔵 BLAU</div>
-
-          {/* Spymasters */}
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#1565c0' }}>🕵️ Geheimdienstchef</div>
+          {words.map((wordObj) => (
             <div
+              key={wordObj.id}
               style={{
-                background: 'white',
-                border: '1px solid #1565c0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: wordObj.revealed ? '#bbb' : '#fff',
+                border: '2px solid #333',
                 borderRadius: 4,
-                padding: 8,
-                minHeight: 60
+                padding: 4,
+                cursor: wordObj.revealed ? 'default' : 'pointer',
+                fontWeight: 600,
+                fontSize: 'clamp(10px, 2.2vw, 14px)',
+                textAlign: 'center',
+                opacity: wordObj.revealed ? 0.5 : 1,
+                transition: 'all 0.15s',
+                userSelect: 'none',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => {
+                if (!wordObj.revealed) {
+                  setWords((prev) =>
+                    prev.map((w) => (w.id === wordObj.id ? { ...w, revealed: true } : w))
+                  )
+                }
               }}
             >
-              {blueSpymasters.map((p) => (
-                <div
-                  key={p.id}
-                  style={{
-                    padding: 4,
-                    marginBottom: 4,
-                    background: '#1565c0',
-                    color: 'white',
-                    borderRadius: 2,
-                    fontSize: '11px',
-                    textAlign: 'center'
-                  }}
-                >
-                  {p.username}
-                </div>
-              ))}
+              {wordObj.word}
             </div>
-          </div>
-
-          {/* Guessers */}
-          <div>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#1565c0' }}>🔍 Ermittler</div>
-            <div
-              style={{
-                background: 'white',
-                border: '1px solid #1565c0',
-                borderRadius: 4,
-                padding: 8,
-                minHeight: 60
-              }}
-            >
-              {blueGuessers.map((p) => (
-                <div
-                  key={p.id}
-                  style={{
-                    padding: 4,
-                    marginBottom: 4,
-                    background: '#90caf9',
-                    color: '#0d47a1',
-                    borderRadius: 2,
-                    fontSize: '11px',
-                    textAlign: 'center'
-                  }}
-                >
-                  {p.username}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* CENTER GAME BOARD (25 WORDS) */}
-        <div
-          style={{
-            flex: 1,
-            padding: 12,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'auto'
-          }}
-        >
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(5, 1fr)',
-              gap: 8,
-              aspectRatio: '1',
-              maxWidth: '100%',
-              maxHeight: '100%',
-              width: 'auto'
-            }}
-          >
-            {words.map((wordObj) => (
-              <div
-                key={wordObj.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: wordObj.revealed ? '#ccc' : '#fff',
-                  border: '2px solid #333',
-                  borderRadius: 4,
-                  padding: 8,
-                  cursor: wordObj.revealed ? 'default' : 'pointer',
-                  fontWeight: 600,
-                  fontSize: 'clamp(10px, 2.5vw, 18px)',
-                  textAlign: 'center',
-                  minHeight: '60px',
-                  opacity: wordObj.revealed ? 0.6 : 1,
-                  transition: 'all 0.2s',
-                  userSelect: 'none'
-                }}
-                onClick={() => {
-                  if (!wordObj.revealed) {
-                    setWords((prev) =>
-                      prev.map((w) => (w.id === wordObj.id ? { ...w, revealed: true } : w))
-                    )
-                  }
-                }}
-              >
-                {wordObj.word}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* RIGHT TEAM (RED) */}
-        <div
-          style={{
-            width: '18%',
-            background: '#ffebee',
-            borderLeft: '2px solid #c62828',
-            padding: 8,
-            overflow: 'auto',
-            fontSize: '12px'
-          }}
-        >
-          <div style={{ fontWeight: 600, color: '#b71c1c', marginBottom: 8, textAlign: 'center' }}>🔴 ROT</div>
-
-          {/* Spymasters */}
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#c62828' }}>🕵️ Geheimdienstchef</div>
-            <div
-              style={{
-                background: 'white',
-                border: '1px solid #c62828',
-                borderRadius: 4,
-                padding: 8,
-                minHeight: 60
-              }}
-            >
-              {redSpymasters.map((p) => (
-                <div
-                  key={p.id}
-                  style={{
-                    padding: 4,
-                    marginBottom: 4,
-                    background: '#c62828',
-                    color: 'white',
-                    borderRadius: 2,
-                    fontSize: '11px',
-                    textAlign: 'center'
-                  }}
-                >
-                  {p.username}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Guessers */}
-          <div>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#c62828' }}>🔍 Ermittler</div>
-            <div
-              style={{
-                background: 'white',
-                border: '1px solid #c62828',
-                borderRadius: 4,
-                padding: 8,
-                minHeight: 60
-              }}
-            >
-              {redGuessers.map((p) => (
-                <div
-                  key={p.id}
-                  style={{
-                    padding: 4,
-                    marginBottom: 4,
-                    background: '#ef9a9a',
-                    color: '#b71c1c',
-                    borderRadius: 2,
-                    fontSize: '11px',
-                    textAlign: 'center'
-                  }}
-                >
-                  {p.username}
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>

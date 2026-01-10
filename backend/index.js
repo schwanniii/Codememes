@@ -194,9 +194,21 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Generate 25 unique words for this game
+    if (allWords.length < 25) {
+      callback({ success: false, error: 'Not enough words' });
+      return;
+    }
+
+    const gameWords = selectRandomItems(allWords, 25);
+
     roomData.status = 'playing';
-    // TODO: initialize game state (words, teams, etc.)
-    roomData.gameState = { round: 1, currentTeam: 'blue', turn: 'spymaster' };
+    roomData.gameState = { 
+      round: 1, 
+      currentTeam: 'blue', 
+      turn: 'spymaster',
+      words: gameWords
+    };
 
     console.log(`Game started in room ${code}`);
 

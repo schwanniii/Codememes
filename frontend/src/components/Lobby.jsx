@@ -25,6 +25,24 @@ export default function Lobby({ onGameStart }) {
     const socket = io(SERVER)
     socketRef.current = socket
 
+    // Restore session from localStorage
+    const savedRoom = localStorage.getItem('currentRoomCode')
+    const savedUsername = localStorage.getItem('username')
+    
+    if (savedRoom && savedUsername) {
+      console.log('Restoring session:', savedRoom)
+      setUsername(savedUsername)
+      socketRef.current.emit('joinRoomByCode', { code: savedRoom, username: savedUsername }, ({ success, code, roomData, error }) => {
+        if (success) {
+          setCurrentRoom({ code, roomData })
+        } else {
+          console.warn('Failed to restore session:', error)
+          localStorage.removeItem('currentRoomCode')
+          localStorage.removeItem('username')
+        }
+      })
+    }
+
     socket.on('roomUpdated', (roomData) => {
       console.log('Room updated:', roomData)
       
@@ -60,6 +78,8 @@ export default function Lobby({ onGameStart }) {
     socketRef.current.emit('createRoom', { username }, ({ success, code, roomData }) => {
       if (success) {
         setErrorMessage('')
+        localStorage.setItem('currentRoomCode', code)
+        localStorage.setItem('username', username)
         setCurrentRoom({ code, roomData })
       } else {
         setErrorMessage('Failed to create room')
@@ -81,6 +101,8 @@ export default function Lobby({ onGameStart }) {
     socketRef.current.emit('joinRoomByCode', { code: joinCode, username }, ({ success, code, roomData, error }) => {
       if (success) {
         setErrorMessage('')
+        localStorage.setItem('currentRoomCode', code)
+        localStorage.setItem('username', username)
         setCurrentRoom({ code, roomData })
         setJoinCode('')
       } else {
@@ -92,6 +114,8 @@ export default function Lobby({ onGameStart }) {
   function handleLeaveRoom() {
     if (currentRoom) {
       socketRef.current.emit('leaveRoomByCode', { code: currentRoom.code })
+      localStorage.removeItem('currentRoomCode')
+      localStorage.removeItem('username')
       setCurrentRoom(null)
       setErrorMessage('')
       setMyRole({ team: null, role: null })
