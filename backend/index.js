@@ -249,11 +249,14 @@ io.on('connection', (socket) => {
     roomData.gameState = {
       round: 1,
       currentTeam: startingTeam,
-      turn: 'spymaster',
+      turn: 'spymaster', // 'spymaster' or 'guesser'
       words: gameWords,
       assignments,
       revealed: Array(25).fill(false),
-      remaining: { blue: remainingBlue, red: remainingRed }
+      remaining: { blue: remainingBlue, red: remainingRed },
+      hint: null, // { word, number }
+      guessesRemaining: 0, // will be set after hint
+      winner: null // null, 'blue', 'red'
     };
 
     console.log(`Game started in room ${code}. Starting team: ${startingTeam}`);
@@ -271,8 +274,8 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Reveal word event
-  socket.on('revealWord', ({ code, index }, callback) => {
+  // Spymaster gives a hint
+  socket.on('giveHint', ({ code, word, number }, callback) => {
     const roomData = rooms.get(code);
     if (!roomData || !roomData.gameState) {
       if (callback) callback({ success: false, error: 'Room or game not found' });
@@ -280,34 +283,126 @@ io.on('connection', (socket) => {
     }
 
     const gs = roomData.gameState;
-    if (gs.revealed[index]) {
-      if (callback) callback({ success: false, error: 'Already revealed' });
+    if (gs.turn !== 'spymaster') {
+      if (callback) callback({ success: false, error: 'Not spymaster turn' });
       return;
     }
 
-    gs.revealed[index] = true;
-    const assign = gs.assignments[index];
-    if (assign === 'blue') gs.remaining.blue = Math.max(0, gs.remaining.blue - 1);
-    if (assign === 'red') gs.remaining.red = Math.max(0, gs.remaining.red - 1);
-
-    // If black revealed -> game over
-    if (assign === 'black') {
-      roomData.status = 'finished';
-      io.to(code).emit('systemMessage', { text: 'Assassin revealed! Game over.' });
+    // Check that caller is a spymaster for current team
+    const caller = roomData.players.find((p) => p.id === socket.id);
+    if (!caller || caller.role !== 'spymaster' || caller.team !== gs.currentTeam) {
+      if (callback) callback({ success: false, error: 'Only current spymaster can give hint' });
+      return;
     }
+
+    // Validate hint
+    if (!word || number < 1 || number > 25) {
+      if (callback) callback({ success: false, error: 'Invalid hint' });
+      return;
+    }
+
+    gs.hint = { word, number };
+    gs.guessesRemaining = number + 1; // Can guess up to number + 1 times
+    gs.turn = 'guesser';
+
+    console.log(`Spymaster ${socket.id} gave hint "${word}: ${number}" for team ${gs.currentTeam}`);
 
     const safeRoom = JSON.parse(JSON.stringify(roomData));
     if (safeRoom.gameState) delete safeRoom.gameState.assignments;
     io.to(code).emit('roomUpdated', safeRoom);
-    
+    if (callback) callback({ success: true });
+  });
+
+  // Guesser guesses a word
+  socket.on('guessWord', ({ code, index }, callback) => {
+    const roomData = rooms.get(code);
+    if (!roomData || !roomData.gameState) {
+      if (callback) callback({ success: false, error: 'Room or game not found' });
+      return;
+    }
+
+    const gs = roomData.gameState;
+    if (gs.turn !== 'guesser' || gs.guessesRemaining <= 0) {
+      if (callback) callback({ success: false, error: 'Cannot guess now' });
+      return;
+    }
+
+    if (gs.revealed[index]) {
+      if (callback) callback({ success: false, error: 'Card already revealed' });
+      return;
+    }
+
+    gs.revealed[index] = true;
+    gs.guessesRemaining--;
+    const assignment = gs.assignments[index];
+
+    let message = '';
+    let turnEnds = false;
+
+    if (assignment === 'black') {
+      // Assassin! Team loses immediately
+      gs.winner = gs.currentTeam === 'blue' ? 'red' : 'blue';
+      roomData.status = 'finished';
+      message = `Assassin! Team ${gs.currentTeam} loses!`;
+      turnEnds = true;
+    } else if (assignment === gs.currentTeam) {
+      // Correct guess for current team
+      gs.remaining[gs.currentTeam]--;
+      message = `Correct! Team ${gs.currentTeam} found an agent.`;
+
+      // Check if team won
+      if (gs.remaining[gs.currentTeam] === 0) {
+        gs.winner = gs.currentTeam;
+        roomData.status = 'finished';
+        message = `Team ${gs.currentTeam} wins!`;
+      }
+      // Else: team can continue guessing (guessesRemaining checked above)
+    } else if (assignment === 'neutral') {
+      // Hit a bystander
+      message = `Neutral! Turn ends.`;
+      turnEnds = true;
+    } else {
+      // Hit opponent's agent
+      gs.remaining[assignment]--;
+      message = `Wrong! Team ${assignment} agent. Turn ends.`;
+      turnEnds = true;
+
+      // Check if opponent won (unlikely but possible)
+      if (gs.remaining[assignment] === 0) {
+        gs.winner = assignment;
+        roomData.status = 'finished';
+        message = `Team ${assignment} wins!`;
+      }
+    }
+
+    // End turn and switch if needed
+    if (turnEnds || gs.guessesRemaining === 0 || (assignment === gs.currentTeam && gs.remaining[gs.currentTeam] === 0)) {
+      if (gs.winner === null) {
+        // Switch teams
+        gs.currentTeam = gs.currentTeam === 'blue' ? 'red' : 'blue';
+        gs.turn = 'spymaster';
+        gs.hint = null;
+        gs.guessesRemaining = 0;
+      }
+    }
+
+    console.log(`Word ${index} guessed: ${assignment}. ${message}`);
+
+    const safeRoom = JSON.parse(JSON.stringify(roomData));
+    if (safeRoom.gameState) delete safeRoom.gameState.assignments;
+    io.to(code).emit('roomUpdated', safeRoom);
+    io.to(code).emit('systemMessage', { text: message });
+
     // Send updated assignments to spymasters
     const spies = roomData.players.filter((p) => p.role === 'spymaster');
     spies.forEach((s) => {
       io.to(s.id).emit('spymasterAssignments', { assignments: roomData.gameState.assignments });
     });
-    
+
     if (callback) callback({ success: true });
   });
+
+
 
   socket.on('updatePlayerRole', ({ code, team, role }, callback) => {
     const roomData = rooms.get(code);

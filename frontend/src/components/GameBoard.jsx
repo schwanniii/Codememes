@@ -8,6 +8,8 @@ export default function GameBoard({ roomData: initialRoomData }) {
   const [loading, setLoading] = useState(!initialRoomData)
   const [spymasterAssignments, setSpymasterAssignments] = useState(null)
   const [socketId, setSocketId] = useState(null)
+  const [hintInput, setHintInput] = useState('')
+  const [numberInput, setNumberInput] = useState('1')
   const socketRef = useRef(null)
 
   useEffect(() => {
@@ -61,12 +63,23 @@ export default function GameBoard({ roomData: initialRoomData }) {
   }, [initialRoomData])
 
   if (loading || !roomData) {
-    return <div style={{ padding: 16, textAlign: 'center' }}>Loading game...</div>
+    return (
+      <div style={{ padding: 16, textAlign: 'center', background: '#f5f5f5', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Loading game...</div>
+          <div style={{ fontSize: 14, color: '#666' }}>Verbinde zum Spiel...</div>
+        </div>
+      </div>
+    )
   }
 
   const gameState = roomData.gameState || { currentTeam: 'blue', turn: 'spymaster', words: [] }
-  const currentTeam = gameState.currentTeam // 'blue' or 'red'
-  const currentTurn = gameState.turn // 'spymaster' or 'guesser'
+  const currentTeam = gameState.currentTeam
+  const currentTurn = gameState.turn
+  const isMyTeam = socketId && (roomData.players || []).find((p) => p.id === socketId)?.team === currentTeam
+  const isMyRole = socketId && (roomData.players || []).find((p) => p.id === socketId)?.role === currentTurn
+  const isSpymaster = socketId && (roomData.players || []).find((p) => p.id === socketId)?.role === 'spymaster'
+  const isGuesser = socketId && (roomData.players || []).find((p) => p.id === socketId)?.role === 'guesser'
 
   const redPlayers = (roomData.players || []).filter((p) => p.team === 'red')
   const bluePlayers = (roomData.players || []).filter((p) => p.team === 'blue')
@@ -77,12 +90,34 @@ export default function GameBoard({ roomData: initialRoomData }) {
   const blueGuessers = bluePlayers.filter((p) => p.role === 'guesser')
 
   const currentTeamLabel = currentTeam === 'blue' ? 'Blau' : 'Rot'
-  const hintText =
-    currentTurn === 'spymaster'
-      ? `${currentTeamLabel} Geheimdienstchef: Gib deinen Ermittlern einen Hinweis`
-      : `${currentTeamLabel} Ermittler: Ratet basierend auf dem Hinweis`
 
-  // helper to leave
+  const handleGiveHint = () => {
+    if (!hintInput || !numberInput) {
+      alert('Bitte Hinweis und Zahl eingeben')
+      return
+    }
+    socketRef.current.emit(
+      'giveHint',
+      { code: roomData.code, word: hintInput, number: parseInt(numberInput) },
+      ({ success, error }) => {
+        if (success) {
+          setHintInput('')
+          setNumberInput('1')
+        } else {
+          alert('Hinweis fehlgeschlagen: ' + error)
+        }
+      }
+    )
+  }
+
+  const handleGuessWord = (index) => {
+    socketRef.current.emit('guessWord', { code: roomData.code, index }, ({ success, error }) => {
+      if (!success) {
+        console.error('Guess failed:', error)
+      }
+    })
+  }
+
   const handleMenuLeave = () => {
     if (!roomData || !roomData.code) return
     const sock = socketRef.current
@@ -94,30 +129,38 @@ export default function GameBoard({ roomData: initialRoomData }) {
     window.location.reload()
   }
 
+  // Check for game over
+  const isGameOver = roomData.gameState?.winner !== null && roomData.gameState?.winner !== undefined
+  const winnerLabel = gameState.winner === 'blue' ? 'Blau' : gameState.winner === 'red' ? 'Rot' : ''
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f5f5', fontFamily: 'sans-serif', overflow: 'hidden' }}>
-      {/* TOP ROW: 3 equal boxes (Blue Info | Spacer | Red Info) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: 6, height: 'auto', minHeight: '72px', maxHeight: '120px' }}>
-        {/* BLUE TEAM INFO */}
-        <div style={{ background: '#e3f2fd', border: '2px solid #1565c0', borderRadius: 6, padding: 10, overflow: 'auto', fontSize: '13px' }}>
-          {/* Spymasters */}
-          <div style={{ marginBottom: 6 }}>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#1565c0' }}>Geheimdienstchefs</div>
-            <div style={{ background: 'white', border: '1px solid #1565c0', borderRadius: 4, padding: 6, minHeight: '28px' }}>
+      {/* TOP ROW: Team displays */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: 8, background: '#fafafa', borderBottom: '2px solid #ddd' }}>
+        {/* BLUE TEAM */}
+        <div style={{ background: '#e3f2fd', border: '3px solid #1565c0', borderRadius: 8, padding: 12, overflow: 'auto' }}>
+          <div style={{ fontWeight: 800, fontSize: 13, color: '#0d47a1', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ display: 'inline-block', width: 16, height: 16, background: '#1565c0', borderRadius: '50%' }}></span>
+            Blau Team
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 11, color: '#1565c0', marginBottom: 4, textTransform: 'uppercase' }}>🔐 Geheimdienstchefs ({blueSpymasters.length})</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {blueSpymasters.length === 0 ? (
-                <div style={{ fontSize: '10px', color: '#999' }}>-</div>
+                <div style={{ fontSize: 11, color: '#999', fontStyle: 'italic' }}>Niemand</div>
               ) : (
                 blueSpymasters.map((p) => (
                   <div
                     key={p.id}
                     style={{
-                      padding: '3px 4px',
-                      marginBottom: '2px',
+                      padding: '6px 10px',
                       background: '#1565c0',
                       color: 'white',
-                      borderRadius: 2,
-                      fontSize: '10px',
-                      textAlign: 'center'
+                      borderRadius: 4,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 2px 4px rgba(21, 101, 192, 0.3)'
                     }}
                   >
                     {p.username}
@@ -126,25 +169,24 @@ export default function GameBoard({ roomData: initialRoomData }) {
               )}
             </div>
           </div>
-
-          {/* Guessers */}
           <div>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#1565c0' }}>Ermittler</div>
-            <div style={{ background: 'white', border: '1px solid #1565c0', borderRadius: 4, padding: 6, minHeight: '28px' }}>
+            <div style={{ fontWeight: 700, fontSize: 11, color: '#1565c0', marginBottom: 4, textTransform: 'uppercase' }}>👥 Ermittler ({blueGuessers.length})</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {blueGuessers.length === 0 ? (
-                <div style={{ fontSize: '10px', color: '#999' }}>-</div>
+                <div style={{ fontSize: 11, color: '#999', fontStyle: 'italic' }}>Niemand</div>
               ) : (
                 blueGuessers.map((p) => (
                   <div
                     key={p.id}
                     style={{
-                      padding: '3px 4px',
-                      marginBottom: '2px',
+                      padding: '6px 10px',
                       background: '#90caf9',
                       color: '#0d47a1',
-                      borderRadius: 2,
-                      fontSize: '10px',
-                      textAlign: 'center'
+                      borderRadius: 4,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 2px 4px rgba(144, 202, 249, 0.4)'
                     }}
                   >
                     {p.username}
@@ -155,31 +197,30 @@ export default function GameBoard({ roomData: initialRoomData }) {
           </div>
         </div>
 
-        {/* CENTER SPACER */}
-        <div style={{ background: '#fff', border: '2px solid #ccc', borderRadius: 6, padding: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ textAlign: 'center', color: '#999', fontSize: '12px' }}>Codenames</div>
-        </div>
-
-        {/* RED TEAM INFO */}
-        <div style={{ background: '#ffebee', border: '2px solid #c62828', borderRadius: 6, padding: 10, overflow: 'auto', fontSize: '13px' }}>
-          {/* Spymasters */}
-          <div style={{ marginBottom: 6 }}>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#c62828' }}>Geheimdienstchefs</div>
-            <div style={{ background: 'white', border: '1px solid #c62828', borderRadius: 4, padding: 6, minHeight: '28px' }}>
+        {/* RED TEAM */}
+        <div style={{ background: '#ffebee', border: '3px solid #c62828', borderRadius: 8, padding: 12, overflow: 'auto' }}>
+          <div style={{ fontWeight: 800, fontSize: 13, color: '#b71c1c', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ display: 'inline-block', width: 16, height: 16, background: '#c62828', borderRadius: '50%' }}></span>
+            Rot Team
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 11, color: '#c62828', marginBottom: 4, textTransform: 'uppercase' }}>🔐 Geheimdienstchefs ({redSpymasters.length})</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {redSpymasters.length === 0 ? (
-                <div style={{ fontSize: '10px', color: '#999' }}>-</div>
+                <div style={{ fontSize: 11, color: '#999', fontStyle: 'italic' }}>Niemand</div>
               ) : (
                 redSpymasters.map((p) => (
                   <div
                     key={p.id}
                     style={{
-                      padding: '3px 4px',
-                      marginBottom: '2px',
+                      padding: '6px 10px',
                       background: '#c62828',
                       color: 'white',
-                      borderRadius: 2,
-                      fontSize: '10px',
-                      textAlign: 'center'
+                      borderRadius: 4,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 2px 4px rgba(198, 40, 40, 0.3)'
                     }}
                   >
                     {p.username}
@@ -188,25 +229,24 @@ export default function GameBoard({ roomData: initialRoomData }) {
               )}
             </div>
           </div>
-
-          {/* Guessers */}
           <div>
-            <div style={{ fontWeight: 600, fontSize: '11px', marginBottom: 4, color: '#c62828' }}>Ermittler</div>
-            <div style={{ background: 'white', border: '1px solid #c62828', borderRadius: 4, padding: 6, minHeight: '28px' }}>
+            <div style={{ fontWeight: 700, fontSize: 11, color: '#c62828', marginBottom: 4, textTransform: 'uppercase' }}>👥 Ermittler ({redGuessers.length})</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {redGuessers.length === 0 ? (
-                <div style={{ fontSize: '10px', color: '#999' }}>-</div>
+                <div style={{ fontSize: 11, color: '#999', fontStyle: 'italic' }}>Niemand</div>
               ) : (
                 redGuessers.map((p) => (
                   <div
                     key={p.id}
                     style={{
-                      padding: '3px 4px',
-                      marginBottom: '2px',
+                      padding: '6px 10px',
                       background: '#ef9a9a',
                       color: '#b71c1c',
-                      borderRadius: 2,
-                      fontSize: '10px',
-                      textAlign: 'center'
+                      borderRadius: 4,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 2px 4px rgba(239, 154, 154, 0.4)'
                     }}
                   >
                     {p.username}
@@ -219,33 +259,49 @@ export default function GameBoard({ roomData: initialRoomData }) {
       </div>
 
       {/* SMALL TOP COUNTERS / MENU */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: '6px 10px' }}>
-        <div style={{ textAlign: 'left', fontWeight: 700, color: '#226' }}>Blue: {gameState.remaining?.blue ?? 0}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, padding: 8, background: '#fff', borderBottom: '2px solid #ddd' }}>
+        <div style={{ textAlign: 'left', fontWeight: 700, fontSize: 14, color: '#226' }}>🔵 Blue: {gameState.remaining?.blue ?? 0}</div>
         <div style={{ textAlign: 'center' }}>
-          <select onChange={(e) => { if (e.target.value === 'leave') handleMenuLeave(); }}>
+          <select onChange={(e) => { if (e.target.value === 'leave') handleMenuLeave(); }} style={{ padding: '6px 12px', fontSize: 12 }}>
             <option>Menu</option>
             <option value="leave">Leave to Lobby</option>
           </select>
         </div>
-        <div style={{ textAlign: 'right', fontWeight: 700, color: '#a22' }}>Red: {gameState.remaining?.red ?? 0}</div>
+        <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 14, color: '#a22' }}>🔴 Red: {gameState.remaining?.red ?? 0}</div>
       </div>
 
       {/* HINT BOX */}
-      <div
-        style={{
-          padding: 8,
-          background: currentTeam === 'blue' ? '#e3f2fd' : '#ffebee',
-          borderBottom: `3px solid ${currentTeam === 'blue' ? '#1565c0' : '#c62828'}`,
-          textAlign: 'center',
-          color: currentTeam === 'blue' ? '#0d47a1' : '#b71c1c',
-          fontWeight: 600,
-          fontSize: '12px',
-          margin: '3px',
-          lineHeight: '1.3'
-        }}
-      >
-        {hintText}
-      </div>
+      {isGameOver ? (
+        <div style={{ padding: 12, background: '#fff9c4', textAlign: 'center', fontWeight: 700, fontSize: 14, color: '#333' }}>
+          🎉 Team {winnerLabel} gewinnt! 🎉
+        </div>
+      ) : currentTurn === 'spymaster' && isMyRole ? (
+        <div style={{ padding: 12, background: '#e8f5e9', borderBottom: '2px solid #4caf50', display: 'flex', gap: 6, alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="Hinweis..."
+            value={hintInput}
+            onChange={(e) => setHintInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleGiveHint()}
+            style={{ flex: 1, padding: 6, borderRadius: 4, border: '1px solid #ccc' }}
+          />
+          <input
+            type="number"
+            min="1"
+            max="25"
+            value={numberInput}
+            onChange={(e) => setNumberInput(e.target.value)}
+            style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #ccc' }}
+          />
+          <button onClick={handleGiveHint} style={{ padding: '6px 12px', background: '#4caf50', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}>
+            Senden
+          </button>
+        </div>
+      ) : (
+        <div style={{ padding: 8, background: currentTeam === 'blue' ? '#e3f2fd' : '#ffebee', borderBottom: `3px solid ${currentTeam === 'blue' ? '#1565c0' : '#c62828'}`, textAlign: 'center', color: currentTeam === 'blue' ? '#0d47a1' : '#b71c1c', fontWeight: 600, fontSize: 12, margin: '3px', lineHeight: '1.3' }}>
+          {gameState.hint ? `Hinweis: "${gameState.hint.word}: ${gameState.hint.number}" (${gameState.guessesRemaining} Rateversuche)` : 'Warte auf Hinweis...'}
+        </div>
+      )}
 
       {/* GAME BOARD: 25 WORDS (5x5 SQUARE) */}
       <div style={{ flex: 1, padding: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 0 }}>
@@ -277,10 +333,8 @@ export default function GameBoard({ roomData: initialRoomData }) {
               <div
                 key={i}
                 onClick={() => {
-                  if (!revealed) {
-                    socketRef.current.emit('revealWord', { code: roomData.code, index: i }, (res) => {
-                      // noop
-                    })
+                  if (!revealed && currentTurn === 'guesser' && isMyRole && !isGameOver) {
+                    handleGuessWord(i)
                   }
                 }}
                 style={{
@@ -292,7 +346,7 @@ export default function GameBoard({ roomData: initialRoomData }) {
                   borderRadius: 3,
                   padding: 6,
                   height: 72,
-                  cursor: revealed ? 'default' : 'pointer',
+                  cursor: revealed || !isMyRole || isGameOver ? 'default' : 'pointer',
                   fontWeight: 600,
                   fontSize: 'clamp(10px, 2.2vw, 14px)',
                   textAlign: 'center',
