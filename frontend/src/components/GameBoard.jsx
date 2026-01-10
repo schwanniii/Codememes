@@ -12,7 +12,7 @@ const LAYOUT = {
   cardGap: '4px',
   
   // Maximale Höhe des 25-Felder-Containers
-  boardMaxHeight: '65vh',
+  boardMaxHeight: '500vh',
   
   // Höhe des Spymaster-Input-Feldes unten
   spymasterInputHeight: '80px',
