@@ -31,9 +31,9 @@ Nächste Schritte:
 - echte Video-API-Integration (Pexels/Pixabay) mit Caching
 - Spiel-Engine (Wort-Grid, Teams, Runden)
 
-Deploy auf Render (gratis)
--------------------------
-Kurzüberblick: Wir deployen zwei Services — das Backend als "web service" und das Frontend als "static site".
+Deploy auf Render (gratis) — Ein Web Service
+---------------------------------------------
+Viel einfacher: Backend und Frontend in EINEM Service. Das Backend serviert die gebauten Frontend-Dateien statisch.
 
 1) Repository pushen
 
@@ -46,26 +46,25 @@ git remote add origin <GIT_REPO_URL>
 git push -u origin main
 ```
 
-2) render.yaml verwenden (optional)
-- Die Datei `render.yaml` im Repo enthält ein Beispiel-Manifest für Render. Ersetze `<GIT_REPO_URL>` und passe Namen an.
+2) In Render UI: Web Service erstellen
+- Wähle dein GitHub-Repo
+- **Build Command:** `cd backend && npm run build && npm install`  
+  (Das baut das Frontend und installiert dann Backend-Dependencies)
+- **Start Command:** `cd backend && npm start`  
+  (Startet den Backend-Server, der auch die Frontend-Dateien serviert)
 
-3) Backend (auf Render)
-- Erstelle einen neuen Service vom Typ "Web Service" (Node), wähle dein Git-Repo und Branch.
-- Build Command: `cd backend && npm install`
-- Start Command: `cd backend && npm start`
-- Render setzt `PORT` automatisch; unser Server verwendet `process.env.PORT`.
+3) Deploy & Domain
+- Render startet den Build und Deploy automatisch
+- Nach dem Deploy erhältst du eine öffentliche URL (z. B. `https://codenames-xyz.onrender.com`)
+- Die App ist dann auf dieser URL live — alles in einem Service!
 
-4) Frontend (auf Render)
-- Erstelle eine neue "Static Site" in Render, wähle dein Repo und Branch.
-- Build Command: `cd frontend && npm install && npm run build`
-- Publish Directory: `frontend/dist`
-- Setze eine Umgebungsvariable `VITE_SOCKET_URL` auf die öffentliche Backend-URL (z. B. `https://codenames-backend.onrender.com`).
+Hinweise
+- Der Backend-Server setzt `PORT` automatisch von Render (via `process.env.PORT`)
+- Socket.IO läuft auf derselben Domain wie das Frontend, also keine CORS-Probleme
+- Lokal kannst du immer noch mit zwei Terminals testen (`cd backend && npm start` und `cd frontend && npm run dev`)
 
-Hinweis zu Umgebungsvariablen
-- `VITE_`-Variablen werden zur Build-Zeit in Vite eingebettet. Setze `VITE_SOCKET_URL` im Render Static Site UI oder im `render.yaml`.
-
-Beispiel: wenn dein Backend heißt `codenames-backend` auf Render, wäre `VITE_SOCKET_URL` z.B. `https://codenames-backend.onrender.com`.
-
-CORS & Sicherheit
-- Das Demo-Backend verwendet `cors()` (offen) für einfache Entwicklung; vor Public-Launch sollten die erlaubten Origins eingeschränkt werden.
+Nächste Schritte (Codenames-Features)
+- echte Video-API-Integration (Pexels/Pixabay) mit Suche
+- Spiel-Engine (Wort-Grid, Teams, Runden)
+- Persistente Datenbank (PostgreSQL auf Render)
 
