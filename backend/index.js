@@ -4,6 +4,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -17,6 +18,20 @@ app.use(express.static(frontendDistPath));
 
 const PORT = process.env.PORT || 3000;
 
+// Load words from alleBegriffe.txt
+let allWords = [];
+try {
+  const wordsPath = path.join(__dirname, '..', 'alleBegriffe.txt');
+  const content = fs.readFileSync(wordsPath, 'utf-8');
+  allWords = content
+    .split(',')
+    .map((w) => w.trim())
+    .filter((w) => w.length > 0);
+  console.log(`Loaded ${allWords.length} words from alleBegriffe.txt`);
+} catch (err) {
+  console.error('Error loading words:', err.message);
+}
+
 // In-Memory Room Storage
 const rooms = new Map();
 
@@ -28,6 +43,12 @@ function generateRoomCode() {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return code;
+}
+
+// Utility: Select random items from array
+function selectRandomItems(arr, count) {
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
 }
 
 // Health
@@ -54,6 +75,15 @@ app.get('/api/videos', (req, res) => {
     }
   ];
   res.json(videos);
+});
+
+// Game words endpoint - returns 25 random unique words
+app.get('/api/game/words', (req, res) => {
+  if (allWords.length < 25) {
+    return res.status(400).json({ error: 'Not enough words loaded' });
+  }
+  const words = selectRandomItems(allWords, 25);
+  res.json({ words });
 });
 
 // Create HTTP server and attach Socket.IO
@@ -166,7 +196,7 @@ io.on('connection', (socket) => {
 
     roomData.status = 'playing';
     // TODO: initialize game state (words, teams, etc.)
-    roomData.gameState = { round: 1, currentTeam: 'red' };
+    roomData.gameState = { round: 1, currentTeam: 'blue', turn: 'spymaster' };
 
     console.log(`Game started in room ${code}`);
 

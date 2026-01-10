@@ -3,6 +3,7 @@ import VideoGrid from './components/VideoGrid'
 import RealtimeDemo from './components/RealtimeDemo'
 import DiagnosticPanel from './components/DiagnosticPanel'
 import Lobby from './components/Lobby'
+import GameBoard from './components/GameBoard'
 
 export default function App() {
   const [videos, setVideos] = useState([])
@@ -20,28 +21,7 @@ export default function App() {
   }
 
   if (gameStarted) {
-    return (
-      <div style={{ maxWidth: 1000, margin: '24px auto', fontFamily: 'sans-serif' }}>
-        <h1>🎮 Game in Progress</h1>
-        <p>Room Code: <strong>{gameStarted.code}</strong></p>
-        <div style={{ padding: 16, background: '#fff3cd', borderRadius: 8, marginBottom: 16 }}>
-          <strong>Game Engine coming soon!</strong> This is where the Codenames game will be played.
-        </div>
-        <button
-          onClick={() => setGameStarted(null)}
-          style={{
-            padding: '8px 16px',
-            background: '#6c757d',
-            color: 'white',
-            border: 'none',
-            borderRadius: 4,
-            cursor: 'pointer'
-          }}
-        >
-          Back to Lobby
-        </button>
-      </div>
-    )
+    return <GameBoard roomData={gameStarted} />
   }
 
   return (
