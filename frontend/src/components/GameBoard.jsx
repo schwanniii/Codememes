@@ -135,125 +135,62 @@ export default function GameBoard({ roomData: initialRoomData }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f5f5', fontFamily: 'sans-serif', overflow: 'hidden' }}>
-      {/* TOP ROW: Team displays */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: 4, background: '#fafafa', borderBottom: '2px solid #ddd', maxHeight: '140px', overflow: 'hidden' }}>
-        {/* BLUE TEAM */}
-        <div style={{ background: '#e3f2fd', border: '3px solid #1565c0', borderRadius: 6, padding: 8, overflow: 'auto', fontSize: '12px' }}>
-          <div style={{ fontWeight: 800, fontSize: 12, color: '#0d47a1', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ display: 'inline-block', width: 16, height: 16, background: '#1565c0', borderRadius: '50%' }}></span>
-            Blau
-          </div>
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ fontWeight: 700, fontSize: 11, color: '#1565c0', marginBottom: 4, textTransform: 'uppercase' }}>🔐 Geheimdienstchefs ({blueSpymasters.length})</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {blueSpymasters.length === 0 ? (
-                <div style={{ fontSize: 11, color: '#999', fontStyle: 'italic' }}>Niemand</div>
-              ) : (
-                blueSpymasters.map((p) => (
-                  <div
-                    key={p.id}
-                    style={{
-                      padding: '6px 10px',
-                      background: '#1565c0',
-                      color: 'white',
-                      borderRadius: 4,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                      boxShadow: '0 2px 4px rgba(21, 101, 192, 0.3)'
-                    }}
-                  >
-                    {p.username}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 11, color: '#1565c0', marginBottom: 4, textTransform: 'uppercase' }}>👥 Ermittler ({blueGuessers.length})</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {blueGuessers.length === 0 ? (
-                <div style={{ fontSize: 11, color: '#999', fontStyle: 'italic' }}>Niemand</div>
-              ) : (
-                blueGuessers.map((p) => (
-                  <div
-                    key={p.id}
-                    style={{
-                      padding: '6px 10px',
-                      background: '#90caf9',
-                      color: '#0d47a1',
-                      borderRadius: 4,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                      boxShadow: '0 2px 4px rgba(144, 202, 249, 0.4)'
-                    }}
-                  >
-                    {p.username}
-                  </div>
-                ))
-              )}
-            </div>
+      {/* TOP ROW: Blue Team | Center Spacer | Red Team */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, padding: 4, background: '#fafafa', borderBottom: '2px solid #ddd', maxHeight: '80px', overflow: 'hidden' }}>
+        {/* BLUE TEAM PLAYERS */}
+        <div style={{ background: '#e3f2fd', border: '2px solid #1565c0', borderRadius: 6, padding: 6, overflow: 'auto', fontSize: '10px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+            {bluePlayers.length === 0 ? (
+              <div style={{ fontSize: 9, color: '#999', fontStyle: 'italic', width: '100%' }}>-</div>
+            ) : (
+              bluePlayers.map((p) => (
+                <div
+                  key={p.id}
+                  style={{
+                    padding: '2px 5px',
+                    background: p.role === 'spymaster' ? '#1565c0' : '#90caf9',
+                    color: p.role === 'spymaster' ? 'white' : '#0d47a1',
+                    borderRadius: 2,
+                    fontSize: 8,
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {p.username}
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        {/* RED TEAM */}
-        <div style={{ background: '#ffebee', border: '3px solid #c62828', borderRadius: 8, padding: 12, overflow: 'auto' }}>
-          <div style={{ fontWeight: 800, fontSize: 13, color: '#b71c1c', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ display: 'inline-block', width: 16, height: 16, background: '#c62828', borderRadius: '50%' }}></span>
-            Rot Team
-          </div>
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ fontWeight: 700, fontSize: 11, color: '#c62828', marginBottom: 4, textTransform: 'uppercase' }}>🔐 Geheimdienstchefs ({redSpymasters.length})</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {redSpymasters.length === 0 ? (
-                <div style={{ fontSize: 11, color: '#999', fontStyle: 'italic' }}>Niemand</div>
-              ) : (
-                redSpymasters.map((p) => (
-                  <div
-                    key={p.id}
-                    style={{
-                      padding: '6px 10px',
-                      background: '#c62828',
-                      color: 'white',
-                      borderRadius: 4,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                      boxShadow: '0 2px 4px rgba(198, 40, 40, 0.3)'
-                    }}
-                  >
-                    {p.username}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 11, color: '#c62828', marginBottom: 4, textTransform: 'uppercase' }}>👥 Ermittler ({redGuessers.length})</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {redGuessers.length === 0 ? (
-                <div style={{ fontSize: 11, color: '#999', fontStyle: 'italic' }}>Niemand</div>
-              ) : (
-                redGuessers.map((p) => (
-                  <div
-                    key={p.id}
-                    style={{
-                      padding: '6px 10px',
-                      background: '#ef9a9a',
-                      color: '#b71c1c',
-                      borderRadius: 4,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                      boxShadow: '0 2px 4px rgba(239, 154, 154, 0.4)'
-                    }}
-                  >
-                    {p.username}
-                  </div>
-                ))
-              )}
-            </div>
+        {/* CENTER SPACER */}
+        <div style={{ background: '#fff', border: '2px solid #ccc', borderRadius: 6, padding: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#999' }}>Codenames</div>
+        </div>
+
+        {/* RED TEAM PLAYERS */}
+        <div style={{ background: '#ffebee', border: '2px solid #c62828', borderRadius: 6, padding: 6, overflow: 'auto', fontSize: '10px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+            {redPlayers.length === 0 ? (
+              <div style={{ fontSize: 9, color: '#999', fontStyle: 'italic', width: '100%' }}>-</div>
+            ) : (
+              redPlayers.map((p) => (
+                <div
+                  key={p.id}
+                  style={{
+                    padding: '2px 5px',
+                    background: p.role === 'spymaster' ? '#c62828' : '#ef9a9a',
+                    color: p.role === 'spymaster' ? 'white' : '#b71c1c',
+                    borderRadius: 2,
+                    fontSize: 8,
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {p.username}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -303,16 +240,15 @@ export default function GameBoard({ roomData: initialRoomData }) {
         </div>
       )}
 
-      {/* GAME BOARD: 25 WORDS (5x5 SQUARE) - Mobile Optimized */}
-      <div style={{ flex: 1, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 0, paddingBottom: 80 }}>
+      {/* GAME BOARD: 25 WORDS (5x5) - with equal margins and rect (not square) tiles */}
+      <div style={{ flex: 1, padding: 4, display: 'flex', alignItems: 'stretch', justifyContent: 'center', overflow: 'hidden', minHeight: 0 }}>
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: 3,
+            gap: 4,
             width: '100%',
             height: '100%',
-            aspectRatio: '1',
             maxWidth: '100vw'
           }}
         >
@@ -356,7 +292,7 @@ export default function GameBoard({ roomData: initialRoomData }) {
                   padding: 2,
                   cursor: revealed || !isMyRole || isGameOver ? 'default' : 'pointer',
                   fontWeight: 600,
-                  fontSize: 'clamp(9px, 1.8vw, 12px)',
+                  fontSize: 'clamp(8px, 1.6vw, 11px)',
                   textAlign: 'center',
                   opacity: revealed ? 0.5 : 1,
                   transition: 'all 0.15s',
@@ -364,21 +300,22 @@ export default function GameBoard({ roomData: initialRoomData }) {
                   overflow: 'hidden',
                   wordBreak: 'break-word',
                   whiteSpace: 'normal',
-                  lineHeight: '1.2',
-                  position: 'relative',
-                  aspectRatio: '1'
+                  lineHeight: '1.1',
+                  position: 'relative'
                 }}
               >
-                <div style={{ padding: '2px' }}>{w}</div>
+                <div style={{ padding: '1px' }}>{w}</div>
               </div>
             )
           })}
         </div>
       </div>
 
-      {/* BOTTOM SPACER - Fixed space for phone scrolling */}
-      <div style={{ minHeight: 0, background: '#fff', borderTop: '1px solid #ddd' }}>
-        {/* Mobile spacer */}
+      {/* SPYMASTER INPUT AREA - Placeholder for now */}
+      <div style={{ background: '#e8f5e9', borderTop: '2px solid #4caf50', padding: 12, minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', overflow: 'auto' }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: '#2e7d32', textAlign: 'center' }}>
+          Eingabefeld für Geheimdienstchefs (Platzhalter)
+        </div>
       </div>
     </div>
   )
