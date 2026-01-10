@@ -17,6 +17,19 @@ app.use(express.static(frontendDistPath));
 
 const PORT = process.env.PORT || 3000;
 
+// In-Memory Room Storage
+const rooms = new Map();
+
+// Utility: Generate 6-char room code
+function generateRoomCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 // Health
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -52,6 +65,7 @@ const io = new Server(httpServer, {
 io.on('connection', (socket) => {
   console.log('Socket connected', socket.id);
 
+  // === LEGACY EVENTS (für alte Demo) ===
   socket.on('joinRoom', ({ room }) => {
     socket.join(room);
     io.to(room).emit('systemMessage', { text: `User ${socket.id} joined ${room}` });
@@ -66,8 +80,108 @@ io.on('connection', (socket) => {
     io.to(room).emit('chatMessage', { id: socket.id, text });
   });
 
+  // === LOBBY EVENTS ===
+  socket.on('createRoom', ({ username }, callback) => {
+    const code = generateRoomCode();
+    const roomData = {
+      code,
+      host: socket.id,
+      hostName: username || 'Host',
+      players: [{ id: socket.id, username: username || 'Host', isHost: true }],
+      status: 'waiting', // waiting, playing, finished
+      gameState: null
+    };
+
+    rooms.set(code, roomData);
+    socket.join(code);
+
+    console.log(`Room created: ${code} by ${socket.id}`);
+
+    callback({ success: true, code, roomData });
+    io.to(code).emit('roomUpdated', roomData);
+  });
+
+  socket.on('joinRoomByCode', ({ code, username }, callback) => {
+    const roomData = rooms.get(code.toUpperCase());
+
+    if (!roomData) {
+      callback({ success: false, error: 'Room not found' });
+      return;
+    }
+
+    if (roomData.status !== 'waiting') {
+      callback({ success: false, error: 'Game already started' });
+      return;
+    }
+
+    roomData.players.push({ id: socket.id, username: username || 'Player', isHost: false });
+    socket.join(code);
+
+    console.log(`User ${socket.id} joined room ${code}`);
+
+    callback({ success: true, code, roomData });
+    io.to(code).emit('roomUpdated', roomData);
+    io.to(code).emit('systemMessage', { text: `${username} joined the room` });
+  });
+
+  socket.on('leaveRoomByCode', ({ code }) => {
+    const roomData = rooms.get(code);
+    if (!roomData) return;
+
+    roomData.players = roomData.players.filter((p) => p.id !== socket.id);
+    socket.leave(code);
+
+    if (roomData.players.length === 0) {
+      rooms.delete(code);
+      console.log(`Room ${code} deleted (empty)`);
+    } else {
+      io.to(code).emit('roomUpdated', roomData);
+      io.to(code).emit('systemMessage', { text: 'A player left' });
+    }
+  });
+
+  socket.on('startGame', ({ code }, callback) => {
+    const roomData = rooms.get(code);
+    if (!roomData) {
+      callback({ success: false, error: 'Room not found' });
+      return;
+    }
+
+    if (roomData.host !== socket.id) {
+      callback({ success: false, error: 'Only host can start game' });
+      return;
+    }
+
+    roomData.status = 'playing';
+    // TODO: initialize game state (words, teams, etc.)
+    roomData.gameState = { round: 1, currentTeam: 'red' };
+
+    console.log(`Game started in room ${code}`);
+
+    callback({ success: true });
+    io.to(code).emit('gameStarted', roomData);
+  });
+
   socket.on('disconnect', () => {
     console.log('Socket disconnected', socket.id);
+
+    // Remove player from all rooms
+    for (const [code, roomData] of rooms.entries()) {
+      roomData.players = roomData.players.filter((p) => p.id !== socket.id);
+
+      if (roomData.players.length === 0) {
+        rooms.delete(code);
+        console.log(`Room ${code} deleted (host disconnected)`);
+      } else {
+        if (roomData.host === socket.id) {
+          // Host disconnected - assign new host
+          roomData.host = roomData.players[0].id;
+          roomData.players[0].isHost = true;
+        }
+        io.to(code).emit('roomUpdated', roomData);
+        io.to(code).emit('systemMessage', { text: 'A player disconnected' });
+      }
+    }
   });
 });
 
