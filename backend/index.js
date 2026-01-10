@@ -148,8 +148,8 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if (roomData.status !== 'waiting') {
-      callback({ success: false, error: 'Game already started' });
+    if (roomData.status !== 'waiting' && roomData.status !== 'playing') {
+      callback({ success: false, error: 'Game not available' });
       return;
     }
 
@@ -169,6 +169,14 @@ io.on('connection', (socket) => {
     if (safe.gameState) delete safe.gameState.assignments;
     io.to(code).emit('roomUpdated', safe);
     io.to(code).emit('systemMessage', { text: `${username} joined the room` });
+
+    // If game is in progress and this player was a spymaster before, send assignments
+    if (roomData.gameState && roomData.gameState.assignments) {
+      const newPlayer = roomData.players[roomData.players.length - 1];
+      if (newPlayer.role === 'spymaster') {
+        io.to(socket.id).emit('spymasterAssignments', { assignments: roomData.gameState.assignments });
+      }
+    }
   });
 
   socket.on('leaveRoomByCode', ({ code }) => {
@@ -291,6 +299,13 @@ io.on('connection', (socket) => {
     const safeRoom = JSON.parse(JSON.stringify(roomData));
     if (safeRoom.gameState) delete safeRoom.gameState.assignments;
     io.to(code).emit('roomUpdated', safeRoom);
+    
+    // Send updated assignments to spymasters
+    const spies = roomData.players.filter((p) => p.role === 'spymaster');
+    spies.forEach((s) => {
+      io.to(s.id).emit('spymasterAssignments', { assignments: roomData.gameState.assignments });
+    });
+    
     if (callback) callback({ success: true });
   });
 

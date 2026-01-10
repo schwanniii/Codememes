@@ -7,11 +7,17 @@ export default function GameBoard({ roomData: initialRoomData }) {
   const [roomData, setRoomData] = useState(initialRoomData || null)
   const [loading, setLoading] = useState(!initialRoomData)
   const [spymasterAssignments, setSpymasterAssignments] = useState(null)
+  const [socketId, setSocketId] = useState(null)
   const socketRef = useRef(null)
 
   useEffect(() => {
     const socket = io(SERVER)
     socketRef.current = socket
+
+    socket.on('connect', () => {
+      setSocketId(socket.id)
+      console.log('Socket connected:', socket.id)
+    })
 
     // Try to rejoin using saved room code and username
     const savedCode = (initialRoomData && initialRoomData.code) || localStorage.getItem('currentRoomCode')
@@ -31,16 +37,22 @@ export default function GameBoard({ roomData: initialRoomData }) {
     }
 
     socket.on('roomUpdated', (rd) => {
+      console.log('Room updated:', rd)
       setRoomData(rd)
       localStorage.setItem('currentGameRoom', JSON.stringify(rd))
     })
 
     socket.on('spymasterAssignments', ({ assignments }) => {
+      console.log('Spymaster assignments received')
       setSpymasterAssignments(assignments)
     })
 
     socket.on('systemMessage', (m) => {
       console.log('System:', m.text)
+    })
+
+    socket.on('connect_error', (err) => {
+      console.error('Socket connection error:', err)
     })
 
     return () => {
@@ -251,8 +263,15 @@ export default function GameBoard({ roomData: initialRoomData }) {
           {(gameState.words || []).map((w, i) => {
             const revealed = gameState.revealed?.[i]
             const assignment = spymasterAssignments ? spymasterAssignments[i] : null
-            const isSpymaster = (roomData.players || []).find((p) => p.id === socketRef.current.id)?.role === 'spymaster'
-            const bg = revealed ? (gameState.assignments?.[i] === 'blue' ? '#aee' : gameState.assignments?.[i] === 'red' ? '#fdd' : gameState.assignments?.[i] === 'black' ? '#000' : '#efe6d6') : '#fff'
+            const isSpymaster = socketId && (roomData.players || []).find((p) => p.id === socketId)?.role === 'spymaster'
+            // Determine tile background: use spymaster assignments if available, otherwise neutral
+            let bg = '#fff'
+            if (revealed && assignment) {
+              if (assignment === 'blue') bg = '#aee'
+              else if (assignment === 'red') bg = '#fdd'
+              else if (assignment === 'black') bg = '#000'
+              else bg = '#efe6d6'
+            }
 
             return (
               <div
@@ -301,16 +320,7 @@ export default function GameBoard({ roomData: initialRoomData }) {
 
       {/* BOTTOM AREA - PLACEHOLDER FOR FUTURE FEATURES */}
       <div style={{ minHeight: '80px', background: '#fff', borderTop: '1px solid #ddd', padding: 8 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ color: '#226', fontWeight: 700 }}>Blue remaining: {gameState.remaining?.blue ?? 0}</div>
-          <div>
-            <select onChange={(e) => { if (e.target.value === 'leave') handleMenuLeave(); }}>
-              <option>Menu</option>
-              <option value="leave">Leave to Lobby</option>
-            </select>
-          </div>
-          <div style={{ color: '#a22', fontWeight: 700 }}>Red remaining: {gameState.remaining?.red ?? 0}</div>
-        </div>
+        {/* Placeholder for future use */}
       </div>
     </div>
   )
