@@ -1,0 +1,23 @@
+# Render deployment manifest (example). Replace <GIT_REPO_URL> and adjust names if needed.
+
+services:
+  - type: web
+    name: codenames-backend
+    env: node
+    plan: free
+    repo: <GIT_REPO_URL>
+    branch: main
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+
+staticSites:
+  - name: codenames-frontend
+    repo: <GIT_REPO_URL>
+    branch: main
+    buildCommand: cd frontend && npm install && npm run build
+    publishPath: frontend/dist
+    plan: free
+    envVars:
+      - key: VITE_SOCKET_URL
+        # Set this to the public URL of your backend service on Render (e.g. https://codenames-backend.onrender.com)
+        value: https://codenames-backend.onrender.com
