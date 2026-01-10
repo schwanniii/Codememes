@@ -6,7 +6,7 @@ const SERVER = import.meta.env.VITE_SOCKET_URL || window.location.origin
 // ========== LAYOUT CONFIGURATION - Hier kannst du die Größen anpassen ==========
 const LAYOUT = {
   // Höhe der Team-Boxen oben (Blue | Center | Red)
-  topTeamBoxHeight: '120px',
+  topTeamBoxHeight: '200px',
   
   // Abstand zwischen den 25 Karten (gap)
   cardGap: '4px',
@@ -153,7 +153,7 @@ export default function GameBoard({ roomData: initialRoomData }) {
   const winnerLabel = gameState.winner === 'blue' ? 'Blau' : gameState.winner === 'red' ? 'Rot' : ''
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f5f5', fontFamily: 'sans-serif', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f5f5', fontFamily: 'sans-serif', overflow: 'auto' }}>
       {/* TOP ROW: Blue Team | Center Spacer | Red Team */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, padding: 4, background: '#fafafa', borderBottom: '2px solid #ddd', maxHeight: LAYOUT.topTeamBoxHeight, overflow: 'hidden' }}>
         {/* BLUE TEAM PLAYERS */}
@@ -260,7 +260,7 @@ export default function GameBoard({ roomData: initialRoomData }) {
       )}
 
       {/* GAME BOARD: 25 WORDS (5x5) - with equal margins and rect (not square) tiles */}
-      <div style={{ padding: LAYOUT.boardPadding, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 0, flex: 0 }}>
+      <div style={{ padding: LAYOUT.boardPadding, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible', minHeight: 0, flex: 1 }}>
         <div
           style={{
             display: 'grid',
@@ -269,7 +269,7 @@ export default function GameBoard({ roomData: initialRoomData }) {
             gap: LAYOUT.cardGap,
             width: '100%',
             height: 'fit-content',
-            maxHeight: LAYOUT.boardMaxHeight,
+            ...(LAYOUT.boardMaxHeight ? { maxHeight: LAYOUT.boardMaxHeight } : {}),
             maxWidth: '100vw'
           }}
         >
