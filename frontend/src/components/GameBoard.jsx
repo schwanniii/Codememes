@@ -136,12 +136,12 @@ export default function GameBoard({ roomData: initialRoomData }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f5f5', fontFamily: 'sans-serif', overflow: 'hidden' }}>
       {/* TOP ROW: Team displays */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: 8, background: '#fafafa', borderBottom: '2px solid #ddd' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: 4, background: '#fafafa', borderBottom: '2px solid #ddd', maxHeight: '140px', overflow: 'hidden' }}>
         {/* BLUE TEAM */}
-        <div style={{ background: '#e3f2fd', border: '3px solid #1565c0', borderRadius: 8, padding: 12, overflow: 'auto' }}>
-          <div style={{ fontWeight: 800, fontSize: 13, color: '#0d47a1', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div style={{ background: '#e3f2fd', border: '3px solid #1565c0', borderRadius: 6, padding: 8, overflow: 'auto', fontSize: '12px' }}>
+          <div style={{ fontWeight: 800, fontSize: 12, color: '#0d47a1', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ display: 'inline-block', width: 16, height: 16, background: '#1565c0', borderRadius: '50%' }}></span>
-            Blau Team
+            Blau
           </div>
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontWeight: 700, fontSize: 11, color: '#1565c0', marginBottom: 4, textTransform: 'uppercase' }}>🔐 Geheimdienstchefs ({blueSpymasters.length})</div>
@@ -259,31 +259,31 @@ export default function GameBoard({ roomData: initialRoomData }) {
       </div>
 
       {/* SMALL TOP COUNTERS / MENU */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, padding: 8, background: '#fff', borderBottom: '2px solid #ddd' }}>
-        <div style={{ textAlign: 'left', fontWeight: 700, fontSize: 14, color: '#226' }}>🔵 Blue: {gameState.remaining?.blue ?? 0}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: 6, background: '#fff', borderBottom: '2px solid #ddd' }}>
+        <div style={{ textAlign: 'left', fontWeight: 700, fontSize: 12, color: '#226' }}>🔵 {gameState.remaining?.blue ?? 0}</div>
         <div style={{ textAlign: 'center' }}>
-          <select onChange={(e) => { if (e.target.value === 'leave') handleMenuLeave(); }} style={{ padding: '6px 12px', fontSize: 12 }}>
+          <select onChange={(e) => { if (e.target.value === 'leave') handleMenuLeave(); }} style={{ padding: '4px 8px', fontSize: 11 }}>
             <option>Menu</option>
-            <option value="leave">Leave to Lobby</option>
+            <option value="leave">Leave</option>
           </select>
         </div>
-        <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 14, color: '#a22' }}>🔴 Red: {gameState.remaining?.red ?? 0}</div>
+        <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 12, color: '#a22' }}>{gameState.remaining?.red ?? 0} 🔴</div>
       </div>
 
       {/* HINT BOX */}
       {isGameOver ? (
-        <div style={{ padding: 12, background: '#fff9c4', textAlign: 'center', fontWeight: 700, fontSize: 14, color: '#333' }}>
+        <div style={{ padding: 8, background: '#fff9c4', textAlign: 'center', fontWeight: 700, fontSize: 13, color: '#333' }}>
           🎉 Team {winnerLabel} gewinnt! 🎉
         </div>
-      ) : currentTurn === 'spymaster' && isMyRole ? (
-        <div style={{ padding: 12, background: '#e8f5e9', borderBottom: '2px solid #4caf50', display: 'flex', gap: 6, alignItems: 'center' }}>
+      ) : currentTurn === 'spymaster' && isMyRole && isMyTeam ? (
+        <div style={{ padding: 8, background: '#e8f5e9', borderBottom: '2px solid #4caf50', display: 'flex', gap: 4, alignItems: 'center', fontSize: 11 }}>
           <input
             type="text"
             placeholder="Hinweis..."
             value={hintInput}
             onChange={(e) => setHintInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleGiveHint()}
-            style={{ flex: 1, padding: 6, borderRadius: 4, border: '1px solid #ccc' }}
+            style={{ flex: 1, padding: 5, borderRadius: 3, border: '1px solid #ccc', fontSize: 11 }}
           />
           <input
             type="number"
@@ -291,25 +291,25 @@ export default function GameBoard({ roomData: initialRoomData }) {
             max="25"
             value={numberInput}
             onChange={(e) => setNumberInput(e.target.value)}
-            style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #ccc' }}
+            style={{ width: 45, padding: 5, borderRadius: 3, border: '1px solid #ccc', fontSize: 11 }}
           />
-          <button onClick={handleGiveHint} style={{ padding: '6px 12px', background: '#4caf50', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}>
+          <button onClick={handleGiveHint} style={{ padding: '5px 10px', background: '#4caf50', color: 'white', border: 'none', borderRadius: 3, cursor: 'pointer', fontWeight: 600, fontSize: 11 }}>
             Senden
           </button>
         </div>
       ) : (
-        <div style={{ padding: 8, background: currentTeam === 'blue' ? '#e3f2fd' : '#ffebee', borderBottom: `3px solid ${currentTeam === 'blue' ? '#1565c0' : '#c62828'}`, textAlign: 'center', color: currentTeam === 'blue' ? '#0d47a1' : '#b71c1c', fontWeight: 600, fontSize: 12, margin: '3px', lineHeight: '1.3' }}>
+        <div style={{ padding: 6, background: currentTeam === 'blue' ? '#e3f2fd' : '#ffebee', borderBottom: `3px solid ${currentTeam === 'blue' ? '#1565c0' : '#c62828'}`, textAlign: 'center', color: currentTeam === 'blue' ? '#0d47a1' : '#b71c1c', fontWeight: 600, fontSize: 11, lineHeight: '1.3' }}>
           {gameState.hint ? `Hinweis: "${gameState.hint.word}: ${gameState.hint.number}" (${gameState.guessesRemaining} Rateversuche)` : 'Warte auf Hinweis...'}
         </div>
       )}
 
-      {/* GAME BOARD: 25 WORDS (5x5 SQUARE) */}
-      <div style={{ flex: 1, padding: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 0 }}>
+      {/* GAME BOARD: 25 WORDS (5x5 SQUARE) - Mobile Optimized */}
+      <div style={{ flex: 1, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 0, paddingBottom: 80 }}>
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: 4,
+            gap: 3,
             width: '100%',
             height: '100%',
             aspectRatio: '1',
@@ -319,14 +319,23 @@ export default function GameBoard({ roomData: initialRoomData }) {
           {(gameState.words || []).map((w, i) => {
             const revealed = gameState.revealed?.[i]
             const assignment = spymasterAssignments ? spymasterAssignments[i] : null
-            const isSpymaster = socketId && (roomData.players || []).find((p) => p.id === socketId)?.role === 'spymaster'
-            // Determine tile background: use spymaster assignments if available, otherwise neutral
+            // Determine tile background
             let bg = '#fff'
+            let borderColor = '#333'
+            let borderWidth = 2
             if (revealed && assignment) {
               if (assignment === 'blue') bg = '#aee'
               else if (assignment === 'red') bg = '#fdd'
               else if (assignment === 'black') bg = '#000'
               else bg = '#efe6d6'
+            }
+            // For spymaster: show colored left border for unrevealed cards
+            if (isSpymaster && !revealed && assignment) {
+              if (assignment === 'blue') borderColor = '#1565c0'
+              else if (assignment === 'red') borderColor = '#c62828'
+              else if (assignment === 'black') borderColor = '#000'
+              else borderColor = '#999'
+              borderWidth = 5
             }
 
             return (
@@ -342,39 +351,34 @@ export default function GameBoard({ roomData: initialRoomData }) {
                   alignItems: 'center',
                   justifyContent: 'center',
                   background: revealed ? bg : '#fff',
-                  border: '2px solid #333',
-                  borderRadius: 3,
-                  padding: 6,
-                  height: 72,
+                  border: `${borderWidth}px solid ${borderColor}`,
+                  borderRadius: 2,
+                  padding: 2,
                   cursor: revealed || !isMyRole || isGameOver ? 'default' : 'pointer',
                   fontWeight: 600,
-                  fontSize: 'clamp(10px, 2.2vw, 14px)',
+                  fontSize: 'clamp(9px, 1.8vw, 12px)',
                   textAlign: 'center',
-                  opacity: revealed ? 0.6 : 1,
+                  opacity: revealed ? 0.5 : 1,
                   transition: 'all 0.15s',
                   userSelect: 'none',
                   overflow: 'hidden',
                   wordBreak: 'break-word',
                   whiteSpace: 'normal',
                   lineHeight: '1.2',
-                  position: 'relative'
+                  position: 'relative',
+                  aspectRatio: '1'
                 }}
               >
-                <div>{w}</div>
-                {isSpymaster && !revealed && assignment && (
-                  <div style={{ position: 'absolute', top: 6, right: 6, fontSize: 11, padding: '2px 6px', background: 'rgba(0,0,0,0.06)', borderRadius: 4 }}>
-                    {assignment}
-                  </div>
-                )}
+                <div style={{ padding: '2px' }}>{w}</div>
               </div>
             )
           })}
         </div>
       </div>
 
-      {/* BOTTOM AREA - PLACEHOLDER FOR FUTURE FEATURES */}
-      <div style={{ minHeight: '80px', background: '#fff', borderTop: '1px solid #ddd', padding: 8 }}>
-        {/* Placeholder for future use */}
+      {/* BOTTOM SPACER - Fixed space for phone scrolling */}
+      <div style={{ minHeight: 0, background: '#fff', borderTop: '1px solid #ddd' }}>
+        {/* Mobile spacer */}
       </div>
     </div>
   )
