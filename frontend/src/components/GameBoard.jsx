@@ -136,7 +136,7 @@ export default function GameBoard({ roomData: initialRoomData }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f5f5', fontFamily: 'sans-serif', overflow: 'hidden' }}>
       {/* TOP ROW: Blue Team | Center Spacer | Red Team */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, padding: 4, background: '#fafafa', borderBottom: '2px solid #ddd', maxHeight: '80px', overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, padding: 4, background: '#fafafa', borderBottom: '2px solid #ddd', maxHeight: '120px', overflow: 'hidden' }}>
         {/* BLUE TEAM PLAYERS */}
         <div style={{ background: '#e3f2fd', border: '2px solid #1565c0', borderRadius: 6, padding: 6, overflow: 'auto', fontSize: '10px' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
@@ -241,7 +241,7 @@ export default function GameBoard({ roomData: initialRoomData }) {
       )}
 
       {/* GAME BOARD: 25 WORDS (5x5) - with equal margins and rect (not square) tiles */}
-      <div style={{ flex: 1, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 0 }}>
+      <div style={{ padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 0, flex: 0 }}>
         <div
           style={{
             display: 'grid',
@@ -249,8 +249,8 @@ export default function GameBoard({ roomData: initialRoomData }) {
             gridAutoRows: 'minmax(auto, 1fr)',
             gap: 4,
             width: '100%',
-            height: 'auto',
-            maxHeight: '50vh',
+            height: 'fit-content',
+            maxHeight: '65vh',
             maxWidth: '100vw'
           }}
         >
