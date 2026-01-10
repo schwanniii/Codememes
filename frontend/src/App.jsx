@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import VideoGrid from './components/VideoGrid'
 import RealtimeDemo from './components/RealtimeDemo'
+import DiagnosticPanel from './components/DiagnosticPanel'
 
 export default function App() {
   const [videos, setVideos] = useState([])
@@ -16,6 +17,7 @@ export default function App() {
     <div style={{ maxWidth: 1000, margin: '24px auto', fontFamily: 'sans-serif' }}>
       <h1>Codenames — Video Picker Demo</h1>
       <p>Dies ist eine kleine Demo: wähle ein Video aus der freien Auswahl.</p>
+      <DiagnosticPanel />
       <RealtimeDemo />
       <VideoGrid videos={videos} />
     </div>
