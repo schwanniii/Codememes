@@ -3,6 +3,25 @@ import { io } from 'socket.io-client'
 
 const SERVER = import.meta.env.VITE_SOCKET_URL || window.location.origin
 
+// ========== LAYOUT CONFIGURATION - Hier kannst du die Größen anpassen ==========
+const LAYOUT = {
+  // Höhe der Team-Boxen oben (Blue | Center | Red)
+  topTeamBoxHeight: '120px',
+  
+  // Abstand zwischen den 25 Karten (gap)
+  cardGap: '4px',
+  
+  // Maximale Höhe des 25-Felder-Containers
+  boardMaxHeight: '65vh',
+  
+  // Höhe des Spymaster-Input-Feldes unten
+  spymasterInputHeight: '80px',
+  
+  // Padding um das Board herum
+  boardPadding: '4px',
+}
+// ============================================================================
+
 export default function GameBoard({ roomData: initialRoomData }) {
   const [roomData, setRoomData] = useState(initialRoomData || null)
   const [loading, setLoading] = useState(!initialRoomData)
@@ -136,7 +155,7 @@ export default function GameBoard({ roomData: initialRoomData }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f5f5', fontFamily: 'sans-serif', overflow: 'hidden' }}>
       {/* TOP ROW: Blue Team | Center Spacer | Red Team */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, padding: 4, background: '#fafafa', borderBottom: '2px solid #ddd', maxHeight: '120px', overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, padding: 4, background: '#fafafa', borderBottom: '2px solid #ddd', maxHeight: LAYOUT.topTeamBoxHeight, overflow: 'hidden' }}>
         {/* BLUE TEAM PLAYERS */}
         <div style={{ background: '#e3f2fd', border: '2px solid #1565c0', borderRadius: 6, padding: 6, overflow: 'auto', fontSize: '10px' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
@@ -241,16 +260,16 @@ export default function GameBoard({ roomData: initialRoomData }) {
       )}
 
       {/* GAME BOARD: 25 WORDS (5x5) - with equal margins and rect (not square) tiles */}
-      <div style={{ padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 0, flex: 0 }}>
+      <div style={{ padding: LAYOUT.boardPadding, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 0, flex: 0 }}>
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(5, 1fr)',
             gridAutoRows: 'minmax(auto, 1fr)',
-            gap: 4,
+            gap: LAYOUT.cardGap,
             width: '100%',
             height: 'fit-content',
-            maxHeight: '65vh',
+            maxHeight: LAYOUT.boardMaxHeight,
             maxWidth: '100vw'
           }}
         >
@@ -314,7 +333,7 @@ export default function GameBoard({ roomData: initialRoomData }) {
       </div>
 
       {/* SPYMASTER INPUT AREA - Placeholder for now */}
-      <div style={{ background: '#e8f5e9', borderTop: '2px solid #4caf50', padding: 12, minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', overflow: 'auto' }}>
+      <div style={{ background: '#e8f5e9', borderTop: '2px solid #4caf50', padding: 12, minHeight: LAYOUT.spymasterInputHeight, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', overflow: 'auto' }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: '#2e7d32', textAlign: 'center' }}>
           Eingabefeld für Geheimdienstchefs (Platzhalter)
         </div>
