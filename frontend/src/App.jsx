@@ -10,26 +10,29 @@ export default function App() {
   const [gameStarted, setGameStarted] = useState(null)
 
   useEffect(() => {
-    fetch('/api/videos')
-      .then((res) => res.json())
-      .then((data) => setVideos(data))
-      .catch((err) => console.error('Video fetch error', err))
+    // fetch('/api/videos')
+    // .then((res) => res.json())
+    //   .then((data) => setVideos(data))
+    //   .catch((err) => console.error('Video fetch error', err))
   }, [])
 
   // Restore game session from localStorage on mount
-  useEffect(() => {
-    const savedGameRoom = localStorage.getItem('currentGameRoom')
-    if (savedGameRoom) {
+ useEffect(() => {
+    const savedGameRoom = localStorage.getItem('currentGameRoom');
+    const savedRoomCode = localStorage.getItem('currentRoomCode');
+    
+    // Nur wiederherstellen, wenn beides da ist
+    if (savedGameRoom && savedRoomCode) {
       try {
-        const roomData = JSON.parse(savedGameRoom)
-        console.log('Restoring game session:', roomData.code)
-        setGameStarted(roomData)
+        const roomData = JSON.parse(savedGameRoom);
+        // WICHTIG: Wir setzen das nur als Initialwert. 
+        // Die Lobby/GameBoard wird via Socket die echten, frischen Daten ziehen.
+        setGameStarted(roomData);
       } catch (err) {
-        console.error('Failed to restore game session:', err)
-        localStorage.removeItem('currentGameRoom')
+        console.error('Failed to restore game session:', err);
       }
     }
-  }, [])
+  }, []);
 
   function handleGameStart(roomData) {
     console.log('Game started, saving to localStorage:', roomData.code)

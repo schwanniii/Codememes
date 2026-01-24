@@ -1,3 +1,12 @@
 body { margin: 0; padding: 0; background: #f7f7f8; }
 h1 { margin: 0 0 8px 0 }
 p { color: #444 }
+* { box-sizing: border-box }
+
+
+/* 
+*:nth-child(5n+1) { outline: 2px solid #ff4500; }
+*:nth-child(5n+2) { outline: 2px solid #32cd32; }
+*:nth-child(5n+3) { outline: 2px solid #1e90ff; }
+*:nth-child(5n+4) { outline: 2px solid #ffd700; }
+*:nth-child(5n+5) { outline: 2px solid #ff00ff; } */

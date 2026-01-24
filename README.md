@@ -1,14 +1,15 @@
 # Codenames — Mini Demo
 
 In alleBegriffe.txt:
-- Schwanni (Z. 399)
-- Maris (Z. 255)
-- Ben (Z. 34)
-- Jacob (Z. 178)
-- Johnny (Z. 182)
-- Simon (Z. 408)
-- Tim-Oke (Z. 456)
-- Frerik (Z. 119)
+- Schwanni (Z. 313)
+- Maris (Z. 209)
+- Ben (Z. 33)
+- Jacob (Z. 149)
+- Johnny (Z. 151)
+- Simon (Z. 319)
+- Tim-Oke (Z. 354)
+- Aaron (Z. 1)
+- Mika (Z. 218)
 
 
 Dies ist ein Minimal-Scaffold für eine Codenames-ähnliche Web-App mit einer Video-Picker-Demo.
@@ -22,17 +23,26 @@ Lokal starten (getrennt in zwei Terminals):
 1) Backend
 
 ```powershell
-cd "backend"
+
+
+cd "D:\JS-VSCode\in Bearbeitung\Codenames\backend"
 npm install
 npm start
+
+
 ```
 
 2) Frontend
 
 ```powershell
-cd "frontend"
+
+
+cd "D:\JS-VSCode\in Bearbeitung\Codenames\frontend"
 npm install
+$env:VITE_SOCKET_URL = "http://localhost:3000"
 npm run dev
+
+
 ```
 
 Die Demo ruft `http://localhost:3000/api/videos` ab; achte darauf, dass das Backend auf Port 3000 läuft.

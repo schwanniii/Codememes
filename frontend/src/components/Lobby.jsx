@@ -13,6 +13,16 @@ const teamColors = {
   blue: { bg: '#e3f2fd', border: '#1565c0', text: '#0d47a1' }
 }
 
+// Hilfsfunktion für eine zufällige ID
+const getPersistentId = () => {
+  let id = localStorage.getItem('persistentPlayerId');
+  if (!id) {
+    id = 'p_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('persistentPlayerId', id);
+  }
+  return id;
+};
+
 export default function Lobby({ onGameStart }) {
   const socketRef = useRef(null)
   const [username, setUsername] = useState('')
@@ -21,95 +31,114 @@ export default function Lobby({ onGameStart }) {
   const [errorMessage, setErrorMessage] = useState('')
   const [myRole, setMyRole] = useState({ team: null, role: null })
 
-  useEffect(() => {
-    const socket = io(SERVER)
-    socketRef.current = socket
+  
 
-    // Restore session from localStorage
-    const savedRoom = localStorage.getItem('currentRoomCode')
-    const savedUsername = localStorage.getItem('username')
+useEffect(() => {
+    if (!socketRef.current) {
+      socketRef.current = io(SERVER);
+    }
+    const socket = socketRef.current;
+
+    const savedRoom = localStorage.getItem('currentRoomCode');
+    const savedUsername = localStorage.getItem('username');
+    const pId = getPersistentId(); // Deine Hilfsfunktion nutzen!
     
+    // Automatischer Rejoin beim Laden der Seite
     if (savedRoom && savedUsername) {
-      console.log('Restoring session:', savedRoom)
-      setUsername(savedUsername)
-      socketRef.current.emit('joinRoomByCode', { code: savedRoom, username: savedUsername }, ({ success, code, roomData, error }) => {
+      socket.emit('joinRoomByCode', { 
+        code: savedRoom, 
+        username: savedUsername, 
+        persistentId: pId 
+      }, ({ success, roomData }) => {
         if (success) {
-          setCurrentRoom({ code, roomData })
-        } else {
-          console.warn('Failed to restore session:', error)
-          localStorage.removeItem('currentRoomCode')
-          localStorage.removeItem('username')
+          setCurrentRoom({ code: savedRoom, roomData });
+          // Falls das Spiel schon läuft, informieren wir die App.jsx
+          if (roomData.status === 'playing') {
+            onGameStart(roomData);
+          }
         }
-      })
+      });
     }
 
     socket.on('roomUpdated', (roomData) => {
-      console.log('Room updated:', roomData)
-      
-      // Update my current role from roomData
-      const myPlayer = roomData.players.find((p) => p.id === socket.id)
+      // Identitäts-Check mit persistentId statt Socket-ID
+      const myPlayer = roomData.players.find((p) => p.persistentId === pId);
       if (myPlayer) {
-        setMyRole({ team: myPlayer.team, role: myPlayer.role })
+        setMyRole({ team: myPlayer.team, role: myPlayer.role });
       }
-      
-      setCurrentRoom((prev) => prev ? { code: prev.code, roomData } : null)
-    })
+      setCurrentRoom((prev) => (prev ? { code: prev.code, roomData } : { code: roomData.code, roomData }));
+    });
 
     socket.on('gameStarted', (roomData) => {
-      console.log('Game started!')
-      onGameStart(roomData)
-    })
-
-    socket.on('systemMessage', (msg) => {
-      console.log('System message:', msg.text)
-    })
+      onGameStart(roomData);
+    });
 
     return () => {
-      socket.disconnect()
-    }
-  }, [onGameStart])
+      socket.off('roomUpdated');
+      socket.off('gameStarted');
+    };
+  }, [onGameStart]);
 
-  function handleCreateRoom() {
+
+
+
+function handleCreateRoom() {
     if (!username) {
-      setErrorMessage('Please enter a username')
-      return
+      setErrorMessage('Bitte gib einen Benutzernamen ein');
+      return;
     }
 
-    socketRef.current.emit('createRoom', { username }, ({ success, code, roomData }) => {
+    // 1. Eindeutige ID holen (aus localStorage oder neu generiert)
+    const pId = getPersistentId();
+
+    // 2. Mit persistentId an den Server senden
+    socketRef.current.emit('createRoom', { username, persistentId: pId }, ({ success, code, roomData }) => {
       if (success) {
-        setErrorMessage('')
-        localStorage.setItem('currentRoomCode', code)
-        localStorage.setItem('username', username)
-        setCurrentRoom({ code, roomData })
+        setErrorMessage('');
+        localStorage.setItem('currentRoomCode', code);
+        localStorage.setItem('username', username);
+        // Die persistentId ist bereits im localStorage durch getPersistentId()
+        
+        setCurrentRoom({ code, roomData });
       } else {
-        setErrorMessage('Failed to create room')
+        setErrorMessage('Fehler beim Erstellen des Raums');
       }
-    })
+    });
   }
 
   function handleJoinRoom() {
     if (!username) {
-      setErrorMessage('Please enter a username')
-      return
+      setErrorMessage('Bitte gib einen Benutzernamen ein');
+      return;
     }
 
     if (!joinCode || joinCode.length !== 6) {
-      setErrorMessage('Invalid code (must be 6 characters)')
-      return
+      setErrorMessage('Ungültiger Code (muss 6 Zeichen sein)');
+      return;
     }
 
-    socketRef.current.emit('joinRoomByCode', { code: joinCode, username }, ({ success, code, roomData, error }) => {
+    // 1. Eindeutige ID holen
+    const pId = getPersistentId();
+
+    // 2. Beim Join-Versuch mitsenden
+    socketRef.current.emit('joinRoomByCode', { 
+      code: joinCode, 
+      username, 
+      persistentId: pId 
+    }, ({ success, code, roomData, error }) => {
       if (success) {
-        setErrorMessage('')
-        localStorage.setItem('currentRoomCode', code)
-        localStorage.setItem('username', username)
-        setCurrentRoom({ code, roomData })
-        setJoinCode('')
+        setErrorMessage('');
+        localStorage.setItem('currentRoomCode', code);
+        localStorage.setItem('username', username);
+        
+        setCurrentRoom({ code, roomData });
+        setJoinCode('');
       } else {
-        setErrorMessage(`Failed to join: ${error}`)
+        setErrorMessage(`Fehler beim Beitreten: ${error}`);
       }
-    })
+    });
   }
+
 
   function handleLeaveRoom() {
     if (currentRoom) {
@@ -122,15 +151,25 @@ export default function Lobby({ onGameStart }) {
     }
   }
 
-  function handleSelectRole(team, role) {
-    if (currentRoom) {
-      socketRef.current.emit('updatePlayerRole', { code: currentRoom.code, team, role }, ({ success, error }) => {
-        if (!success) {
-          setErrorMessage(`Cannot change role: ${error}`)
-        }
-      })
-    }
+
+ function handleSelectRole(team, role) {
+    if (!currentRoom || !socketRef.current) return;
+    
+    const payload = { code: currentRoom.code, team, role };
+    console.log("📡 Sende Rollen-Update an Server:", payload); 
+
+    socketRef.current.emit('updatePlayerRole', payload, (response) => {
+      if (response && response.success) {
+        console.log("✅ Server hat die Rolle bestätigt.");
+        setErrorMessage('');
+      } else {
+        const err = response?.error || 'Unbekannter Fehler';
+        console.error("❌ Server lehnte Rollen-Update ab:", err);
+        setErrorMessage(`Rollenwechsel fehlgeschlagen: ${err}`);
+      }
+    });
   }
+
 
   function handleStartGame() {
     if (currentRoom) {
@@ -180,46 +219,6 @@ export default function Lobby({ onGameStart }) {
           <strong style={{ display: 'block', marginBottom: 8 }}>Wähle dein Team & deine Rolle:</strong>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-            {/* ROT */}
-            <div style={{ padding: 12, background: '#fff3e0', border: '2px solid #ff6f00', borderRadius: 6 }}>
-              <div style={{ fontWeight: 600, color: '#e65100', marginBottom: 8 }}>🔴 Team Rot</div>
-              <button
-                onClick={() => handleSelectRole('red', 'spymaster')}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: 8,
-                  marginBottom: 6,
-                  background: myRole.team === 'red' && myRole.role === 'spymaster' ? '#ff6f00' : '#fff',
-                  color: myRole.team === 'red' && myRole.role === 'spymaster' ? 'white' : '#333',
-                  border: myRole.team === 'red' && myRole.role === 'spymaster' ? '2px solid #ff6f00' : '1px solid #ddd',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  fontWeight: myRole.team === 'red' && myRole.role === 'spymaster' ? 600 : 400,
-                  transition: 'all 0.2s'
-                }}
-              >
-                🕵️ Geheimdienstchef
-              </button>
-              <button
-                onClick={() => handleSelectRole('red', 'guesser')}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: 8,
-                  background: myRole.team === 'red' && myRole.role === 'guesser' ? '#ff6f00' : '#fff',
-                  color: myRole.team === 'red' && myRole.role === 'guesser' ? 'white' : '#333',
-                  border: myRole.team === 'red' && myRole.role === 'guesser' ? '2px solid #ff6f00' : '1px solid #ddd',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  fontWeight: myRole.team === 'red' && myRole.role === 'guesser' ? 600 : 400,
-                  transition: 'all 0.2s'
-                }}
-              >
-                🔍 Ermittler
-              </button>
-            </div>
-
             {/* BLAU */}
             <div style={{ padding: 12, background: '#e8f5e9', border: '2px solid #1976d2', borderRadius: 6 }}>
               <div style={{ fontWeight: 600, color: '#0d47a1', marginBottom: 8 }}>🔵 Team Blau</div>
@@ -253,6 +252,46 @@ export default function Lobby({ onGameStart }) {
                   borderRadius: 4,
                   cursor: 'pointer',
                   fontWeight: myRole.team === 'blue' && myRole.role === 'guesser' ? 600 : 400,
+                  transition: 'all 0.2s'
+                }}
+              >
+                🔍 Ermittler
+              </button>
+            </div>
+
+            {/* ROT */}
+            <div style={{ padding: 12, background: '#fff3e0', border: '2px solid #ff6f00', borderRadius: 6 }}>
+              <div style={{ fontWeight: 600, color: '#e65100', marginBottom: 8 }}>🔴 Team Rot</div>
+              <button
+                onClick={() => handleSelectRole('red', 'spymaster')}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: 8,
+                  marginBottom: 6,
+                  background: myRole.team === 'red' && myRole.role === 'spymaster' ? '#ff6f00' : '#fff',
+                  color: myRole.team === 'red' && myRole.role === 'spymaster' ? 'white' : '#333',
+                  border: myRole.team === 'red' && myRole.role === 'spymaster' ? '2px solid #ff6f00' : '1px solid #ddd',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  fontWeight: myRole.team === 'red' && myRole.role === 'spymaster' ? 600 : 400,
+                  transition: 'all 0.2s'
+                }}
+              >
+                🕵️ Geheimdienstchef
+              </button>
+              <button
+                onClick={() => handleSelectRole('red', 'guesser')}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: 8,
+                  background: myRole.team === 'red' && myRole.role === 'guesser' ? '#ff6f00' : '#fff',
+                  color: myRole.team === 'red' && myRole.role === 'guesser' ? 'white' : '#333',
+                  border: myRole.team === 'red' && myRole.role === 'guesser' ? '2px solid #ff6f00' : '1px solid #ddd',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  fontWeight: myRole.team === 'red' && myRole.role === 'guesser' ? 600 : 400,
                   transition: 'all 0.2s'
                 }}
               >
@@ -317,7 +356,7 @@ export default function Lobby({ onGameStart }) {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             style={{ marginLeft: 8, padding: 6, width: 200 }}
-            placeholder="Your name"
+            placeholder="Marieke"
           />
         </label>
       </div>
