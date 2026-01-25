@@ -356,7 +356,7 @@ function handleCreateRoom() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             style={{ marginLeft: 8, padding: 6, width: 200 }}
-            placeholder="Marieke"
+            placeholder="Max Mustermann"
           />
         </label>
       </div>
