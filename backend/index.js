@@ -5,7 +5,6 @@ import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import confetti from 'canvas-confetti';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -627,6 +626,6 @@ socket.on('updatePlayerRole', ({ code, team, role }, callback) => {
   });
 });
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });
