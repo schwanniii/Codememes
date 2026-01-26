@@ -1,6 +1,7 @@
 # Codenames — Mini Demo
 
 In alleBegriffe.txt:
+  (kann leicht verschoben sein)
 - Schwanni (Z. 313)
 - Maris (Z. 209)
 - Ben (Z. 33)
@@ -10,6 +11,8 @@ In alleBegriffe.txt:
 - Tim-Oke (Z. 354)
 - Aaron (Z. 1)
 - Mika (Z. 218)
+- Julian (Z. 153)
+- Jende Jonga (Z. 150)
 
 
 Dies ist ein Minimal-Scaffold für eine Codenames-ähnliche Web-App mit einer Video-Picker-Demo.
