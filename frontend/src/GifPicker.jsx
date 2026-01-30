@@ -12,7 +12,7 @@ export default function GifPicker({ onGifSelect }) {
     setIsSearching(true);
 
     // Giphy API URL
-    const url = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(searchTerm)}&limit=25&rating=g&lang=de`;
+    const url = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(searchTerm)}&limit=50&rating=g&lang=de`;
 
     try {
       const res = await fetch(url);
@@ -75,7 +75,13 @@ export default function GifPicker({ onGifSelect }) {
           />
         ))}
       </div>
-      <div style={{ fontSize: '9px', color: '#999', marginTop: '5px', textAlign: 'right' }}>Powered by GIPHY</div>
+      <div style={{ display:'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: '10px', color: '#838282', marginTop: '5px', textAlign: 'left' }}>(deutsch)</div>
+        <div style={{ fontSize: '9px', color: '#999', marginTop: '5px', textAlign: 'right' }}>Powered by GIPHY</div>
+      </div>  
     </div>
   );
 }
+
+
+ 

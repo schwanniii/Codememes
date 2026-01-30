@@ -394,9 +394,45 @@ socket.on('sendGif', (data) => {
 
 
 
+// socket.on('updatePendingGuesses', ({ code, newPendingGuessIndex }) => {
+//   if (!code){
+//     console.log("❌ FEHLER: Kein Raum-Code übermittelt");
+//     return;
+//   };
+
+//   const rooms = Array.from(socket.rooms);
+//   if (!rooms.includes(code)) {
+//     socket.join(code);
+//   }
+
+//   console.log("rooms:", rooms);
+  
+//   io.to(code).emit('updatePendingGuesses', newPendingGuessIndex);
+  
+//   console.log(`[Room ${code}] Neue Vormerkungen:`, newPendingGuessIndex);
 
 
+// });
 
+
+socket.on('updatePendingGuesses', ({ code, newPendingGuessIndex }) => {
+  // 1. Sicherstellen, dass der Code ein sauberer String ist
+  const roomCode = String(code).trim();
+
+  if (!roomCode) {
+    console.error("❌ Kein Raumcode erhalten!");
+    return;
+  }
+
+  // 2. Den Socket zwingen, dem Raum beizutreten (falls noch nicht geschehen)
+  socket.join(roomCode);
+
+  // 3. LOG zum Debuggen: Welche Räume hat dieser Socket gerade?
+  console.log(`Socket ${socket.id} sendet an Raum ${roomCode}. Aktuelle Räume:`, Array.from(socket.rooms));
+
+  // 4. Senden an alle im Raum
+  io.to(roomCode).emit('updatePendingGuesses', newPendingGuessIndex);
+});
 
 
 

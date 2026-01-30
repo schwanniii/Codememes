@@ -34,7 +34,7 @@ export default function GameBoard({ roomData: initialRoomData }) {
     return saved !== null ? saved : null;
   });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [pendingGuessIndex, setPendingGuessIndex] = useState(null);
+  const [pendingGuessIndex, setPendingGuessIndex] = useState([]);
 
 
   
@@ -95,9 +95,19 @@ useEffect(() => {
     setPendingGif(null);
   }
 
-  setPendingGuessIndex(null);
+  socketRef.current?.emit('updatePendingGuesses', { 
+    code: roomData?.code || localStorage.getItem('currentRoomCode'), // Wichtig: Der Server muss wissen, für welchen Raum!
+    newPendingGuessIndex: []
+  });
 });
 
+
+  socket.on('updatePendingGuesses', (newPendingGuessIndex) => {
+
+    console.log("(Moin) PendingGuessIndex:", newPendingGuessIndex);
+
+    setPendingGuessIndex(newPendingGuessIndex || []);
+  });
 
 
 
@@ -129,6 +139,7 @@ useEffect(() => {
   return () => {
     socket.off('connect');
     socket.off('roomUpdated');
+    socket.off('updatePendingGuesses');
     socket.off('spymasterAssignments');
     socket.off('gameStarted');
     socket.off('systemMessage');
@@ -303,8 +314,6 @@ const handleGuessWord = (index, element) => {
     } else {
       console.log("[DEBUG] Kein Konfetti", response.isCorrect);
     }
-    
-    setPendingGuessIndex(null);
   });
 };
 
@@ -373,27 +382,27 @@ const handleEndTurn = () => {
 
 
 
-const handleCardClick = (index) => {
-  const isGuesser = me?.role === 'guesser';
-  const isMyTurn = roomData.gameState.turn === 'guesser' && roomData.gameState.currentTeam === me?.team;
+// const handleCardClick = (index) => {
+//   const isGuesser = me?.role === 'guesser';
+//   const isMyTurn = roomData.gameState.turn === 'guesser' && roomData.gameState.currentTeam === me?.team;
   
-  if (!isGuesser || !isMyTurn || roomData.gameState.revealed[index]) return;
+//   if (!isGuesser || !isMyTurn || roomData.gameState.revealed[index]) return;
 
-  // Toggle-Logik: Wenn schon ausgewählt, dann schließe es, sonst öffne es
-  setPendingGuessIndex(prevIndex => (prevIndex === index ? null : index));
-};
+//   // Toggle-Logik: Wenn schon ausgewählt, dann schließe es, sonst öffne es
+//   setPendingGuessIndex(prevIndex => (prevIndex === index ? null : index));
+// };
 
 
 
-const confirmGuess = (e, index) => {
-  e.stopPropagation(); // Ganz wichtig: Verhindert, dass handleCardClick erneut feuert!
+// const confirmGuess = (e, index) => {
+//   e.stopPropagation(); // Ganz wichtig: Verhindert, dass handleCardClick erneut feuert!
   
-  socketRef.current.emit('guessWord', { code: roomData.code, index }, (response) => {
-    if (response.success) {
-      setPendingGuessIndex(null);
-    }
-  });
-};
+//   socketRef.current.emit('guessWord', { code: roomData.code, index }, (response) => {
+//     if (response.success) {
+//       setPendingGuessIndex(null);
+//     }
+//   });
+// };
 
 
 
@@ -437,6 +446,13 @@ const confirmGuess = (e, index) => {
 
 
 
+
+
+  
+
+  console.log(pendingGuessIndex);
+
+  console.log("Raum-Code: ", roomData?.code);
   
 
 
@@ -505,14 +521,14 @@ const confirmGuess = (e, index) => {
 
       {/* SMALL TOP COUNTERS / MENU */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: 6, background: '#fff', borderBottom: '2px solid #ddd' }}>
-        <div style={{ textAlign: 'left', fontWeight: 700, fontSize: 12, color: '#226' }}>🔵 {gameState.remaining?.blue ?? 0}</div>
+        <div style={{ textAlign: 'left', fontWeight: 700, fontSize: 20, color: '#226' }}>🔵 {gameState.remaining?.blue ?? 0}</div>
         <div style={{ textAlign: 'center' }}>
           <select onChange={(e) => { if (e.target.value === 'leave') handleMenuLeave(); }} style={{ padding: '4px 8px', fontSize: 11 }}>
             <option>Menu</option>
             <option value="leave">Leave</option>
           </select>
         </div>
-        <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 12, color: '#a22' }}>{gameState.remaining?.red ?? 0} 🔴</div>
+        <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 20, color: '#a22' }}>{gameState.remaining?.red ?? 0} 🔴</div>
       </div>
       
 
@@ -623,7 +639,7 @@ const confirmGuess = (e, index) => {
 
 
 
-      <div style={{ padding: LAYOUT.boardPadding, display: 'flex', flex: 1, background: `${me?.team === 'blue' ? '#4086d648' : '#e2696981'}` }}>
+      <div style={{ padding: LAYOUT.boardPadding, display: 'flex', flex: 1, background: `${me?.team === 'blue' ? '#69afff48' : '#f8969681'}` }}>
         <div
           style={{
             display: 'grid',
@@ -641,7 +657,7 @@ const confirmGuess = (e, index) => {
               : (gameState.assignments ? gameState.assignments[i] : null);
 
             // Prüfen, ob diese Karte gerade vorgemerkt ist
-            const isPending = pendingGuessIndex === i;
+            const isPending = pendingGuessIndex.includes(i);
             
             let backgroundColor = '#fff';
             let textColor = '#000';
@@ -656,16 +672,12 @@ const confirmGuess = (e, index) => {
             } 
             // 2. Logik für verdeckte Karten (Nur für Spymaster sichtbar)
             else if (isSpymaster && assignment) {
-              if (assignment === 'blue') backgroundColor = 'rgb(122, 184, 235)'; // Leicht transparent
+              if (assignment === 'blue') backgroundColor = 'rgb(122, 184, 235)';
               else if (assignment === 'red') backgroundColor = 'rgb(221, 111, 111)';
               else if (assignment === 'black') backgroundColor = 'rgb(134, 134, 134)';
               else backgroundColor = 'rgb(247, 219, 171)'; //transparency auf 1
             }
 
-
-
-
-            
 
 
 
@@ -676,8 +688,18 @@ const confirmGuess = (e, index) => {
                 onClick={() => {
                   // Logik: Nur Guesser im richtigen Team darf die Vormerkung umschalten
                   if (!revealed && currentTurn === 'guesser' && isMyRole && isMyTeam && !isGameOver) {
+                    console.log('Sende Raum-Code: ' + roomData?.code);
                     // Toggle: Wenn schon ausgewählt, dann null, sonst i
-                    setPendingGuessIndex(prev => prev === i ? null : i);
+                    const newPendingGuessIndex = pendingGuessIndex.includes(i)
+                      ? pendingGuessIndex.filter(index => index !== i)
+                      : [...pendingGuessIndex, i];
+
+                    setPendingGuessIndex(newPendingGuessIndex);
+
+                    socketRef.current?.emit('updatePendingGuesses', { 
+                      code: roomData?.code || localStorage.getItem('currentRoomCode'), // Wichtig: Der Server muss wissen, für welchen Raum!
+                      newPendingGuessIndex: newPendingGuessIndex
+                    });
                   }
                 }}
                 style={{
@@ -706,7 +728,7 @@ const confirmGuess = (e, index) => {
                 
 
 
-
+                {/* Stempel */}
                 {revealed && assignment !== 'neutral' && (
                   <div style={{
                     position: 'absolute',
@@ -728,7 +750,7 @@ const confirmGuess = (e, index) => {
                 )}
 
                 {/* DAS GRÜNE BESTÄTIGUNGSFELD */}
-                {isPending && !revealed && (
+                {isPending && !revealed && currentTurn === 'guesser' && isMyRole && isMyTeam && !isGameOver &&(
                   <div
                     onClick={(e) => {
                       e.stopPropagation(); // Verhindert, dass die Karte sich wieder schließt
@@ -752,15 +774,39 @@ const confirmGuess = (e, index) => {
                       zIndex: 10,
                       fontWeight: 'bold'
                     }}
-                  >
-                    Tippen
-                  </div>
-                )}
+                    >
+                      Tippen
+                    </div>
+                  )}
+
+
+                  {/* für die anderen als den aktiven Ermittler */}
+                  {isPending && !revealed && !(currentTurn === 'guesser' && isMyRole && isMyTeam) && !isGameOver &&(
+                    <div
+                      
+                      style={{
+                        position: 'absolute',
+                        top: '1px',
+                        right: '1px',
+                        backgroundColor: '#4cbb30',
+                        color: 'white',
+                        fontSize: '9px',
+                        padding: '3px 1px',
+                        borderRadius: '3px',
+                        zIndex: 10,
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      ???
+                    </div>
+                  )}
               </div>
             );
           })}
         </div>
       </div>
+
+
 
 
 
@@ -794,7 +840,7 @@ const confirmGuess = (e, index) => {
 
     {/* GIF-ZONE (Ehemals Spymaster Input Area) */}
     <div style={{ 
-      background: '#fff', 
+      backgroundColor: `${me?.team === 'blue' ? '#69afff48' : '#f8969681'}`, 
       borderTop: `5px solid ${me?.team === 'blue' ? '#1565c0' : '#c62828'}`, 
       width: '100vw',
       minHeight: '24rem',
@@ -804,6 +850,7 @@ const confirmGuess = (e, index) => {
       alignItems: 'center', 
       padding: '10px 0',
       position: 'relative',
+      border: '2px solid purple' 
     }}>
 
       
@@ -870,7 +917,7 @@ const confirmGuess = (e, index) => {
                 </div>
               )}
 
-              <div style={{ marginBottom: '8px', fontSize: '13px', fontWeight: 'bold', color: '#2e7d32' }}>
+              <div style={{ marginBottom: '8px', fontSize: '13px', fontWeight: 'bold', color: me?.team === 'blue' ? '#0d63c5' : '#c22525' }}>
                 Gib deinem Team einen Hinweis:
               </div>
 
@@ -909,7 +956,7 @@ const confirmGuess = (e, index) => {
               
             </div>
           ) : (
-            <div style={{ padding: '20px', color: '#999', fontStyle: 'italic', fontSize: '14px', textAlign: 'center' }}>
+            <div style={{ padding: '20px', color: '#726f6f', fontStyle: 'italic', fontSize: '18px', textAlign: 'center' }}>
               {isSpymaster ? "Warte auf deinen Zug..." : "Hier empfängst du Hinweise deines Geheimdienstchefs..."}
             </div>
           )}
