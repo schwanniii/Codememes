@@ -46,8 +46,7 @@ export default function App() {
 
   return (
     <div style={{ maxWidth: 1000, margin: '24px auto', fontFamily: 'sans-serif' }}>
-      <h1>Codememes</h1>
-      <p>Create a room or join with a code. The host can start the game.</p>
+      <h1 style={{ fontSize: 32, fontWeight: 700, transform: 'translateX(2%)' }}>Codememes</h1>
       
       <Lobby onGameStart={handleGameStart} />
       

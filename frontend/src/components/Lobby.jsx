@@ -175,7 +175,7 @@ function handleCreateRoom() {
     if (currentRoom) {
       socketRef.current.emit('startGame', { code: currentRoom.code }, ({ success, error }) => {
         if (!success) {
-          setErrorMessage(`Cannot start: ${error}`)
+          setErrorMessage(`Spielstart fehlgeschlagen: ${error}`)
         }
       })
     }
@@ -194,7 +194,7 @@ function handleCreateRoom() {
 
         {/* Spieler-Liste */}
         <div style={{ marginBottom: 16 }}>
-          <strong>Players ({playerCount}):</strong>
+          <strong>Spieler ({playerCount}):</strong>
           <ul style={{ margin: '8px 0', paddingLeft: 20, listStyle: 'none' }}>
             {roomData.players.map((p) => {
               const color = p.team ? teamColors[p.team] : { bg: '#f0f0f0', text: '#666' }
@@ -307,7 +307,7 @@ function handleCreateRoom() {
             <button
               onClick={handleStartGame}
               style={{
-                padding: '8px 16px',
+                padding: '12px 20px',
                 background: '#28a745',
                 color: 'white',
                 border: 'none',
@@ -316,7 +316,7 @@ function handleCreateRoom() {
                 fontWeight: 600
               }}
             >
-              ▶️ Start Game
+              ▶️ Start
             </button>
           )}
 
@@ -331,12 +331,12 @@ function handleCreateRoom() {
               cursor: 'pointer'
             }}
           >
-            Leave Room
+            Raum verlassen
           </button>
         </div>
 
         <div style={{ marginTop: 12, fontSize: 12, color: '#666' }}>
-          {isHost ? '🟢 Du bist der Host. Alle Spieler sollten ihre Rollen wählen, bevor du "Start Game" drückst.' : '⏳ Warte bis der Host das Spiel startet...'}
+          {isHost ? '🟢 Du bist der Host. Alle Spieler sollten ihre Rollen wählen, bevor du "Start" drückst.' : '⏳ Warte, bis der Host das Spiel startet...'}
         </div>
       </div>
     )
@@ -344,13 +344,13 @@ function handleCreateRoom() {
 
   return (
     <div style={{ padding: 16, background: '#f5f5f5', borderRadius: 8, marginBottom: 16 }}>
-      <h2>📍 Lobby</h2>
+      <h2 style={{ fontSize: 30}}>Lobby</h2>
 
       {errorMessage && <div style={{ color: 'red', marginBottom: 8 }}>{errorMessage}</div>}
 
       <div style={{ marginBottom: 12 }}>
         <label>
-          Username:
+          Name:
           <input
             type="text"
             value={username}
@@ -373,15 +373,15 @@ function handleCreateRoom() {
             cursor: 'pointer'
           }}
         >
-          Create Room
+          Raum erstellen
         </button>
-        <p style={{ margin: '8px 0 0 0', fontSize: 12, color: '#666' }}>Create a new game room and invite friends with the room code.</p>
+        <p style={{ margin: '8px 0 0 0', fontSize: 12, color: '#666' }}>Erstelle einen Raum und lade Freunde mit dem Code ein.</p>
       </div>
 
       <div style={{ padding: 12, background: 'white', borderRadius: 4 }}>
         <div style={{ marginBottom: 8 }}>
           <label>
-            Room Code:
+            Raum Code:
             <input
               type="text"
               value={joinCode}
@@ -403,9 +403,9 @@ function handleCreateRoom() {
             cursor: 'pointer'
           }}
         >
-          Join Room
+          Raum beitreten
         </button>
-        <p style={{ margin: '8px 0 0 0', fontSize: 12, color: '#666' }}>Enter a room code to join an existing game.</p>
+        <p style={{ margin: '8px 0 0 0', fontSize: 12, color: '#666' }}>Mit Code einem Raum beitreten.</p>
       </div>
     </div>
   )

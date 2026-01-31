@@ -534,8 +534,10 @@ const handleEndTurn = () => {
 
       {/* HINT BOX */}
       {isGameOver ? (
-        <div style={{ padding: 8, background: '#fff9c4', textAlign: 'center', fontWeight: 700, fontSize: 13, color: '#333' }}>
-          🎉 Team {winnerLabel} gewinnt! 🎉
+        <div style={{ padding: 8, background: '#fff9c4', textAlign: 'center', fontWeight: 700, fontSize: 15, color: '#333' }}>
+          🎉 Team 
+          <span style={{ color: winnerLabel === 'blue' ? '#1565c0' : '#c62828' }}> {winnerLabel} </span> 
+          gewinnt! 🎉
         </div>
       ) : currentTurn === 'spymaster' && isMyRole && isMyTeam ? (
         /* Dies war vorher der Bereich mit den Eingabefeldern. Jetzt nur noch Text. */
@@ -729,7 +731,7 @@ const handleEndTurn = () => {
 
 
                 {/* Stempel */}
-                {revealed && assignment !== 'neutral' && (
+                {revealed && (
                   <div style={{
                     position: 'absolute',
                     border: `4px solid ${assignment === 'black' ? '#ff0000' : 'rgba(255,255,255,0.6)'}`,
@@ -745,7 +747,7 @@ const handleEndTurn = () => {
                     fontFamily: '"Courier New", Courier, monospace', // Schreibmaschinen-Look
                     boxShadow: '2px 2px 0px rgba(0,0,0,0.2)'
                   }}>
-                    {assignment === 'black' ? 'ELIMINIERT' : 'GEFUNDEN'}
+                    {assignment === 'black' ? 'ELIMINIERT' : assignment === 'neutral' ? 'NEUTRAL' : 'GEFUNDEN'}
                   </div>
                 )}
 
