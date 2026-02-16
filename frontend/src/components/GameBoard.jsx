@@ -19,7 +19,7 @@ const LAYOUT = {
 }
 // ============================================================================
 
-export default function GameBoard({ roomData: initialRoomData }) {
+export default function GameBoard({ roomData: initialRoomData, onReset }) {
   const [roomData, setRoomData] = useState(initialRoomData || null)
   const [loading, setLoading] = useState(!initialRoomData)
   const [spymasterAssignments, setSpymasterAssignments] = useState(null)
@@ -35,6 +35,7 @@ export default function GameBoard({ roomData: initialRoomData }) {
   });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [pendingGuessIndex, setPendingGuessIndex] = useState([]);
+  const [isHost, setIsHost] = useState(false);
 
 
   
@@ -55,6 +56,14 @@ useEffect(() => {
     const savedCode = (initialRoomData && initialRoomData.code) || localStorage.getItem('currentRoomCode');
     const savedUsername = localStorage.getItem('username');
     const persistentId = localStorage.getItem('persistentPlayerId'); // WICHTIG für Reconnect
+    setIsHost(roomData.hostPersistentId === persistentId);
+    
+    //das da -> als bedingung, um den button für zurück zur lobby anzeigen zu können
+    // console.log(roomData.hostPersistentId === persistentId, "Vergleich Host-ID mit persistentId:", { host: roomData?.hostPersistentId, persistentId: persistentId, allePersistentID: roomData?.players?.map(p => p.persistentId) });
+    //  === socketRef.current.id
+    
+
+
 
     if (savedCode && savedUsername) {
       // Wir schicken die persistentId mit, damit der Server uns erkennt!
@@ -102,6 +111,9 @@ useEffect(() => {
 });
 
 
+
+
+
   socket.on('updatePendingGuesses', (newPendingGuessIndex) => {
 
     console.log("(Moin) PendingGuessIndex:", newPendingGuessIndex);
@@ -114,6 +126,18 @@ useEffect(() => {
   socket.on('spymasterAssignments', ({ assignments }) => {
     console.log('🔥 FARBEN ERHALTEN:', assignments);
     setSpymasterAssignments(assignments);
+  });
+
+  // Rückkehr zur Lobby (wird nur vom Host ausgelöst)
+  socket.on('roomResetToLobby', ({ roomData }) => {
+    console.log('🏁 roomResetToLobby empfangen im GameBoard:', roomData);
+    // optional: aktualisiere lokalen roomData vor dem Verlassen
+    setRoomData(roomData);
+    // persistante Informationen löschen, damit ein Reload nicht in die Spielansicht springt
+    localStorage.removeItem('currentGameRoom');
+    if (onReset) {
+      onReset();
+    }
   });
 
   socket.on('gameStarted', (rd) => {
@@ -144,6 +168,7 @@ useEffect(() => {
     socket.off('gameStarted');
     socket.off('systemMessage');
     socket.off('displayGif');
+    socket.off('roomResetToLobby');
     socket.disconnect();
   };
 }, []);
@@ -298,6 +323,58 @@ useEffect(() => {
   //     }
   //   )
   // }
+
+
+
+const zurückZurLobby = () => {
+  // Wir nutzen zuerst den state, falls vorhanden, bevor wir im localStorage nachschauen.
+  let currentCode = roomData?.code || localStorage.getItem('currentRoomCode');
+  if (currentCode) currentCode = currentCode.toUpperCase();
+
+  console.log("Zurück zur Lobby, Raum zurücksetzen:", currentCode);
+
+  if (currentCode && socketRef.current) {
+    socketRef.current.emit('requestResetToLobby', { code: currentCode }, (resp) => {
+      if (!resp || !resp.success) {
+        console.error('Reset fehlgeschlagen:', resp && resp.error);
+      } else {
+        console.log('Reset erfolgreich bestätigt vom Server');
+      }
+    });
+  } else {
+    console.warn('Kein gültiger Code oder keine Socket-Verbindung, konnte nicht zurücksetzen', currentCode, socketRef.current?.id);
+  }
+};
+
+
+
+
+//brauche ich wahrscheinlich nicht mehr
+    // //irgendwie alle anderen spieler joinen lassen
+
+    // socketRef.current.emit('joinRoomByCode', { 
+    //   code: localStorage.getItem('currentRoomCode'),
+    //   username, 
+    //   persistentId: pId 
+    // }, ({ success, code, roomData, error }) => {
+    //   if (success) {
+    //     setErrorMessage('');
+    //     localStorage.setItem('currentRoomCode', code);
+    //     localStorage.setItem('username', username);
+        
+    //     setCurrentRoom({ code, roomData });
+    //     setJoinCode('');
+    //   } else {
+    //     setErrorMessage(`Fehler beim Beitreten: ${error}`);
+    //   }
+    // });
+
+
+
+
+
+
+
 
 
 
@@ -534,10 +611,14 @@ const handleEndTurn = () => {
 
       {/* HINT BOX */}
       {isGameOver ? (
-        <div style={{ padding: 8, background: '#fff9c4', textAlign: 'center', fontWeight: 700, fontSize: 15, color: '#333' }}>
+         <div style={{ padding: 8, background: '#fff9c4', textAlign: 'center', fontWeight: 700, fontSize: 15, color: '#333' }}>
           🎉 Team 
           <span style={{ color: winnerLabel === 'blue' ? '#1565c0' : '#c62828' }}> {winnerLabel} </span> 
           gewinnt! 🎉
+          <br/>
+          {isHost && (
+          <button onClick={() => zurückZurLobby()} style={{ padding: '6px 10px', margin: '6px 0 0 0', fontSize: 12, background: '#f0f0f0', border: '1px solid #ccc', borderRadius: 4, cursor: 'pointer' }}>zurück zur Lobby</button>
+          )}
         </div>
       ) : currentTurn === 'spymaster' && isMyRole && isMyTeam ? (
         /* Dies war vorher der Bereich mit den Eingabefeldern. Jetzt nur noch Text. */
@@ -665,19 +746,41 @@ const handleEndTurn = () => {
             let textColor = '#000';
             let border = isPending ? '3px solid #000' : '2px solid #333';
 
-            // 1. Logik für AUFGEDECKTE Karten (Sichtbar für ALLE)
+            // should we reveal the assignment to everyone?
+            const showColor = (revealed || isGameOver) && assignment;
+
+            // Define color palettes: bright for revealed, muted for unrevealed
+            const colorBright = {
+              blue: 'rgb(84, 118, 212)',
+              red: 'rgb(228, 56, 56)',
+              black: '#292929',
+              neutral: '#e6b663'
+            };
+            
+            const colorMuted = {
+              blue: 'rgb(122, 184, 235)',
+              red: 'rgb(221, 111, 111)',
+              black: 'rgb(134, 134, 134)',
+              neutral: 'rgb(247, 219, 171)'
+            };
+
+            // 1. Revealed cards: always show bright colour (for all players)
             if (revealed && assignment) {
-              if (assignment === 'blue') { backgroundColor = 'rgb(84, 118, 212)'; }
-              else if (assignment === 'red') { backgroundColor = 'rgb(228, 56, 56)'; }
-              else if (assignment === 'black') { backgroundColor = '#292929'; textColor = '#fff'; }
-              else if (assignment === 'neutral') { backgroundColor = '#e6b663'; }
-            } 
-            // 2. Logik für verdeckte Karten (Nur für Spymaster sichtbar)
-            else if (isSpymaster && assignment) {
-              if (assignment === 'blue') backgroundColor = 'rgb(122, 184, 235)';
-              else if (assignment === 'red') backgroundColor = 'rgb(221, 111, 111)';
-              else if (assignment === 'black') backgroundColor = 'rgb(134, 134, 134)';
-              else backgroundColor = 'rgb(247, 219, 171)'; //transparency auf 1
+              backgroundColor = colorBright[assignment];
+              if (assignment === 'black') textColor = '#fff';
+            }
+            // 2. Unrevealed cards during active game:
+            else if (!isGameOver && !revealed) {
+              // Spymaster sees muted colours
+              if (isSpymaster && assignment) {
+                backgroundColor = colorMuted[assignment];
+              }
+              // Normal players see white background
+              // (already initialized to '#fff')
+            }
+            // 3. Unrevealed cards at game over: show bright colour to everyone
+            else if (isGameOver && !revealed && assignment) {
+              backgroundColor = colorMuted[assignment];
             }
 
 
@@ -889,7 +992,7 @@ const handleEndTurn = () => {
             <div style={{ textAlign: 'center' }}>
 
               {/* Bestätigen-Knopf (Grüner Haken) */}
-                {isSpymaster && isMyTeam && isMyRole && (
+                {isSpymaster && isMyTeam && isMyRole && !isGameOver &&(
                   <button 
                     onClick={handleConfirmClue}
                     // Der Button ist nur klickbar, wenn ein GIF UND eine Zahl gewählt wurden

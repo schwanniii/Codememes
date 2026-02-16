@@ -73,6 +73,8 @@ useEffect(() => {
       onGameStart(roomData);
     });
 
+
+
     return () => {
       socket.off('roomUpdated');
       socket.off('gameStarted');
@@ -172,6 +174,7 @@ function handleCreateRoom() {
 
 
   function handleStartGame() {
+    //hier bedingung einfügen, dass der host nur starten kann, wenn alle spieler eine rolle gewählt haben
     if (currentRoom) {
       socketRef.current.emit('startGame', { code: currentRoom.code }, ({ success, error }) => {
         if (!success) {
@@ -235,7 +238,7 @@ function handleCreateRoom() {
                   borderRadius: 4,
                   cursor: 'pointer',
                   fontWeight: myRole.team === 'blue' && myRole.role === 'spymaster' ? 600 : 400,
-                  transition: 'all 0.2s'
+                  // transition: 'all 0.2s'
                 }}
               >
                 🕵️ Geheimdienstchef
@@ -252,7 +255,7 @@ function handleCreateRoom() {
                   borderRadius: 4,
                   cursor: 'pointer',
                   fontWeight: myRole.team === 'blue' && myRole.role === 'guesser' ? 600 : 400,
-                  transition: 'all 0.2s'
+                  // transition: 'all 0.2s'
                 }}
               >
                 🔍 Ermittler
@@ -275,7 +278,7 @@ function handleCreateRoom() {
                   borderRadius: 4,
                   cursor: 'pointer',
                   fontWeight: myRole.team === 'red' && myRole.role === 'spymaster' ? 600 : 400,
-                  transition: 'all 0.2s'
+                  // transition: 'all 0.2s'
                 }}
               >
                 🕵️ Geheimdienstchef
@@ -292,7 +295,7 @@ function handleCreateRoom() {
                   borderRadius: 4,
                   cursor: 'pointer',
                   fontWeight: myRole.team === 'red' && myRole.role === 'guesser' ? 600 : 400,
-                  transition: 'all 0.2s'
+                  // transition: 'all 0.2s'
                 }}
               >
                 🔍 Ermittler

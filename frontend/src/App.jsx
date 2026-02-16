@@ -40,8 +40,14 @@ export default function App() {
     setGameStarted(roomData)
   }
 
+  function handleResetToLobby() {
+    console.log('Returning to lobby, clearing saved game');
+    localStorage.removeItem('currentGameRoom');
+    setGameStarted(null);
+  }
+
   if (gameStarted) {
-    return <GameBoard roomData={gameStarted} />
+    return <GameBoard roomData={gameStarted} onReset={handleResetToLobby} />
   }
 
   return (

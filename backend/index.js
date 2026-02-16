@@ -61,6 +61,8 @@ function fromGuesserToSpymaster(roomData) {
 }
 
 
+
+
 // Health
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -224,7 +226,7 @@ socket.on('joinRoomByCode', ({ code, username, persistentId }, callback) => {
 
   // WICHTIG: Wenn das Spiel läuft und der Spieler Spymaster ist, 
   // schicken wir ihm sofort die Farben (Assignments)
-  if (room.status === 'playing' && player.role === 'spymaster' && room.gameState.assignments) {
+  if (room.status !== 'waiting' && player.role === 'spymaster' && room.gameState.assignments) {
     socket.emit('spymasterAssignments', { assignments: room.gameState.assignments });
   }
 
@@ -240,6 +242,59 @@ socket.on('joinRoomByCode', ({ code, username, persistentId }, callback) => {
 });
 
 
+
+//zurück zur Lobby (neue Runde starten)
+socket.on('requestResetToLobby', ({ code }, callback) => {
+  // normalize incoming code and make sure it's a string
+  const roomCode = String(code || '').toUpperCase().trim();
+  console.log("requestResetToLobby called with", code, "-> normalized", roomCode);
+  console.log("existing room keys:", Array.from(rooms.keys()));
+
+  const room = rooms.get(roomCode);
+  console.log("Found room:", room);
+  console.log(`🔄 Reset zum Raum: ${room ? '[found]' : '[not found]'} angefragt für Raum ${roomCode} von Socket ${socket.id}`);
+
+  if (!room) {
+    // nothing we can do
+    console.log(`❌ Kein Raum mit Code ${roomCode} gefunden. Reset abgebrochen.`);
+    if (callback) callback({ success: false, error: 'Room not found' });
+    return;
+  }
+
+  // optional: only host can trigger the reset
+  // if (room.host !== socket.id) return;
+  console.log(`✅ Validierung bestanden. Socket ${socket.id} darf Raum ${roomCode} zurücksetzen.`);
+
+  // 2. Zustand zurücksetzen – spielbezogene Daten auf den Ursprung bringen
+  room.status = 'waiting';
+  room.gameState = {
+    words: [],
+    assignments: null,
+    turn: '',
+    foundWords: [],
+    currentClue: null,
+    revealed: [],
+    remaining: { blue: 0, red: 0 },
+    hint: null,
+    guessesRemaining: 0,
+    winner: null,
+    round: 0
+  };
+
+  // Spielerrollen/teams löschen, damit beim nächsten Start neu gewählt wird
+  room.players.forEach((p) => {
+    p.team = null;
+    p.role = null;
+  });
+
+  // 3. Allen im Raum (einschließlich Host) sagen, dass es zurück geht
+  // Wir senden die aktualisierten roomData mit
+  io.in(roomCode).emit('roomResetToLobby', { roomData: room });
+});
+
+
+
+
   socket.on('leaveRoomByCode', ({ code }) => {
     const roomData = rooms.get(code);
     if (!roomData) return;
@@ -250,6 +305,7 @@ socket.on('joinRoomByCode', ({ code, username, persistentId }, callback) => {
     if (roomData.players.length === 0) {
       rooms.delete(code);
       console.log(`Room ${code} deleted (empty)`);
+      console.log('remaining room keys now:', Array.from(rooms.keys()));
     } else {
       const safe = JSON.parse(JSON.stringify(roomData));
       if (safe.gameState) delete safe.gameState.assignments;
@@ -507,8 +563,14 @@ socket.on('endTurn', ({ code }) => {
 
 
 
+
+
+
   // Guesser guesses a word
   socket.on('guessWord', ({ code, index }, callback) => {
+    // make sure this socket is in the correct room so it can hear the broadcasts
+    if (code) socket.join(code);
+
     const roomData = rooms.get(code);
     if (!roomData || !roomData.gameState) {
       if (callback) callback({ success: false, error: 'Room or game not found' });
@@ -592,6 +654,37 @@ socket.on('endTurn', ({ code }) => {
       io.to(s.id).emit('spymasterAssignments', { assignments: roomData.gameState.assignments });
     });
 
+
+
+    //wenn Spiel vorbei, dann alle Assignments an alle Spieler
+      console.log('guter Versuch', roomData.status);
+
+    if (roomData.status === 'finished') {
+      console.log(`🔍 Spiel vorbei, sende alle Assignments an alle Spieler im Raum ${roomData.code}`);
+
+      // log current membership for debugging
+      const members = io.sockets.adapter.rooms.get(roomData.code);
+      console.log(`   🎯 Socket-IDs aktuell im Raum ${roomData.code}:`, members ? Array.from(members) : []);
+      roomData.players.forEach(p => {
+        const connected = p.id && io.sockets.sockets.get(p.id);
+        console.log(`   Spieler ${p.username} (id=${p.id}) connected?`, !!connected);
+      });
+
+      // broadcast to the room (all sockets that are joined)
+      io.to(roomData.code).emit('spymasterAssignments', {
+        assignments: roomData.gameState.assignments
+      });
+
+      // also individually send to any socket IDs we know about, just in case
+      roomData.players.forEach((p) => {
+        if (p.id) {
+          io.to(p.id).emit('spymasterAssignments', { assignments: roomData.gameState.assignments });
+        }
+      });
+    }
+
+
+
     if (callback) {
       callback({ 
         success: true,
@@ -607,8 +700,6 @@ socket.on('endTurn', ({ code }) => {
 
 
 socket.on('updatePlayerRole', ({ code, team, role }, callback) => {
-  console.log("hallo");
-  console.log("halt dich an mir fest, wenn das leben dich runterzieht, wow gänsehaut");
 
   const roomData = rooms.get(code.toUpperCase());
   if (!roomData) return callback?.({ success: false, error: 'Room not found' });
@@ -642,21 +733,26 @@ socket.on('updatePlayerRole', ({ code, team, role }, callback) => {
 
   socket.on('disconnect', () => {
   console.log('Socket disconnected:', socket.id);
-  
-    // Lösche den Raum NICHT sofort. Warte 5 Sekunden, ob der Host zurückkommt.
+
+    // When a socket disconnects we do **not** delete the entire room anymore.
+    // Instead we leave the player record intact so that a reconnect using the
+    // persistentId will restore their slot.  We also clear the `id` field to
+    // indicate that the user is currently offline.
     rooms.forEach((room, code) => {
       const player = room.players.find(p => p.id === socket.id);
-      if (player && player.isHost) {
-        console.log(`Host ${player.username} disconnected. Waiting for reconnect...`);
-        setTimeout(() => {
-          const currentRoom = rooms.get(code);
-          // Prüfe, ob der Host immer noch offline ist (id hat sich nicht erneuert)
-          if (currentRoom && !currentRoom.players.some(p => p.isHost && io.sockets.sockets.get(p.id)?.connected)) {
-            console.log(`Room ${code} deleted (host timeout)`);
-            rooms.delete(code);
-            io.to(code).emit('systemMessage', { text: 'Raum wurde geschlossen, da der Host nicht zurückgekehrt ist.' });
-          }
-        }, 5000); // 5 Sekunden Kulanzzeit
+      if (player) {
+        console.log(`Player ${player.username} disconnected from room ${code}`);
+        // keep the player entry for reconnection but remove the socket id
+        player.id = null;
+
+        if (player.isHost) {
+          console.log(`Host for room ${code} went offline (will not auto-delete room).`);
+        }
+
+        // broadcast updated room state so remaining clients can react
+        const safe = JSON.parse(JSON.stringify(room));
+        if (safe.gameState) delete safe.gameState.assignments;
+        io.to(code).emit('roomUpdated', safe);
       }
     });
   });
