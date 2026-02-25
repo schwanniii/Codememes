@@ -18,7 +18,7 @@ app.use(express.static(frontendDistPath));
 
 const PORT = process.env.PORT || 3000;
 
-// Load words from alleBegriffe.txt
+// === alleBegriffe ===
 let allWords = [];
 try {
   const wordsPath = path.join(__dirname, '..', 'alleBegriffe.txt');
@@ -31,6 +31,55 @@ try {
 } catch (err) {
   console.error('Error loading words:', err.message);
 }
+
+
+// === Ganze Namen ===
+let alleGanzeNamen = [];
+try {
+  const wordsPath = path.join(__dirname, '..', 'Namen', 'ganze Namen.txt');
+  const content = fs.readFileSync(wordsPath, 'utf-8');
+  alleGanzeNamen = content
+    .split('\n')
+    .map((w) => w.trim())
+    .filter((w) => w.length > 0);
+  console.log(`Loaded ${alleGanzeNamen.length} ganze Namen from ganze Namen.txt`);
+} catch (err) {
+  console.error('Error loading words:', err.message);
+}
+
+
+// === Vornamen ===
+let alleVornamen = [];
+try {
+  const wordsPath = path.join(__dirname, '..', 'Namen', 'Vornamen + Nachnamen', 'Vornamen.txt');
+  const content = fs.readFileSync(wordsPath, 'utf-8');
+  alleVornamen = content
+    .split('\n')
+    .map((w) => w.trim())
+    .filter((w) => w.length > 0);
+  console.log(`Loaded ${alleVornamen.length} Vornamen from Vornamen.txt`);
+} catch (err) {
+  console.error('Error loading words:', err.message);
+}
+
+
+// === Nachnamen ===
+let alleNachnamen = [];
+try {
+  const wordsPath = path.join(__dirname, '..', 'Namen', 'Vornamen + Nachnamen', 'Nachnamen.txt');
+  const content = fs.readFileSync(wordsPath, 'utf-8');
+  alleNachnamen = content
+    .split('\n')
+    .map((w) => w.trim())
+    .filter((w) => w.length > 0);
+  console.log(`Loaded ${alleNachnamen.length} Nachnamen from Nachnamen.txt`);
+} catch (err) {
+  console.error('Error loading words:', err.message);
+}
+
+
+console.log("Insgesamt eladen: ", allWords.length, " Wörter,", alleGanzeNamen.length, " ganze Namen,", alleVornamen.length, " Vornamen und", alleNachnamen.length, " Nachnamen.");
+
 
 // In-Memory Room Storage
 const rooms = new Map();
@@ -69,25 +118,25 @@ app.get('/api/health', (req, res) => {
 });
 
 // Mock video list - demo only
-app.get('/api/videos', (req, res) => {
-  const videos = [
-    {
-      id: 'v1',
-      title: 'Flower (Demo)',
-      thumbnail: 'https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?auto=format&fit=crop&w=240&q=60',
-      videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-      source: 'MDN CC0'
-    },
-    {
-      id: 'v2',
-      title: 'Big Buck Bunny (Demo)',
-      thumbnail: 'https://images.unsplash.com/photo-1504198453319-5ce911bafcde?auto=format&fit=crop&w=240&q=60',
-      videoUrl: 'https://sample-videos.com/video123/mp4/240/big_buck_bunny_240p_1mb.mp4',
-      source: 'Sample Videos'
-    }
-  ];
-  res.json(videos);
-});
+// app.get('/api/videos', (req, res) => {
+//   const videos = [
+//     {
+//       id: 'v1',
+//       title: 'Flower (Demo)',
+//       thumbnail: 'https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?auto=format&fit=crop&w=240&q=60',
+//       videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+//       source: 'MDN CC0'
+//     },
+//     {
+//       id: 'v2',
+//       title: 'Big Buck Bunny (Demo)',
+//       thumbnail: 'https://images.unsplash.com/photo-1504198453319-5ce911bafcde?auto=format&fit=crop&w=240&q=60',
+//       videoUrl: 'https://sample-videos.com/video123/mp4/240/big_buck_bunny_240p_1mb.mp4',
+//       source: 'Sample Videos'
+//     }
+//   ];
+//   res.json(videos);
+// });
 
 // Game words endpoint - returns 25 random unique words
 app.get('/api/game/words', (req, res) => {
@@ -141,6 +190,30 @@ io.on('connection', (socket) => {
 
   socket.on('chatMessage', ({ room, text }) => {
     io.to(room).emit('chatMessage', { id: socket.id, text });
+  });
+
+
+
+  //zufälligen Namen generieren
+  socket.on('randomName', (previousName, callback) => {
+
+  let username = "";
+
+  while (username === "" || username === previousName) {      
+    if (Math.random() >= 0.5) {
+        const randomVorname = alleVornamen[Math.floor(Math.random() * alleVornamen.length)];
+        const randomNachname = alleNachnamen[Math.floor(Math.random() * alleNachnamen.length)];
+        username = `${randomVorname || "keinVorname"} ${randomNachname || "keinNachname"}`;
+    } else {
+        username = alleGanzeNamen[Math.floor(Math.random() * alleGanzeNamen.length)] || "Max Mustermann";
+    }
+  }
+
+  callback({
+    success: true,
+    name: username
+  });
+  
   });
 
   // === LOBBY EVENTS ===
@@ -315,6 +388,11 @@ socket.on('requestResetToLobby', ({ code }, callback) => {
   });
 
   socket.on('startGame', ({ code }, callback) => {
+
+    console.log("moin");
+    console.log(`Insgesamt ${alleVornamen.length} Vornamen und ${alleNachnamen.length} Nachnamen geladen.`);
+
+
     const roomData = rooms.get(code);
     if (!roomData) {
       callback({ success: false, error: 'Room not found' });
@@ -595,6 +673,7 @@ socket.on('endTurn', ({ code }) => {
 
     let message = '';
     let turnEnds = false;
+    let isCorrect = false;
   
 
 
@@ -602,9 +681,12 @@ socket.on('endTurn', ({ code }) => {
       gs.winner = gs.currentTeam === 'blue' ? 'red' : 'blue';
       roomData.status = 'finished';
       message = `Assassin! Team ${gs.currentTeam} loses!`;
+      isCorrect = false;
       turnEnds = true;
     } else if (assignment === gs.currentTeam) {
       gs.remaining[gs.currentTeam]--;
+      isCorrect = true;
+      console.log('isCorrect:', isCorrect, 'assignment:', assignment, 'currentTeam:', gs.currentTeam);
       message = `Correct! Team ${gs.currentTeam} found an agent.`;
       if (gs.remaining[gs.currentTeam] === 0) {
         gs.winner = gs.currentTeam;
@@ -613,10 +695,12 @@ socket.on('endTurn', ({ code }) => {
       }
     } else if (assignment === 'neutral') {
       message = `Neutral! Turn ends.`;
+      isCorrect = false;
       turnEnds = true;
     } else {
       gs.remaining[assignment]--;
       message = `Wrong! Team ${assignment} agent. Turn ends.`;
+      isCorrect = false;
       turnEnds = true;
       if (gs.remaining[assignment] === 0) {
         gs.winner = assignment;
@@ -657,7 +741,7 @@ socket.on('endTurn', ({ code }) => {
 
 
     //wenn Spiel vorbei, dann alle Assignments an alle Spieler
-      console.log('guter Versuch', roomData.status);
+      console.log('roomData.status: ', roomData.status);
 
     if (roomData.status === 'finished') {
       console.log(`🔍 Spiel vorbei, sende alle Assignments an alle Spieler im Raum ${roomData.code}`);
@@ -688,8 +772,8 @@ socket.on('endTurn', ({ code }) => {
     if (callback) {
       callback({ 
         success: true,
-        isCorrect: assignment === gs.currentTeam
-    });
+        isCorrect: isCorrect
+      });
   }
   });
 

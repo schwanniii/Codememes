@@ -13,6 +13,23 @@ const teamColors = {
   blue: { bg: '#e3f2fd', border: '#1565c0', text: '#0d47a1' }
 }
 
+async function leseDatei() {
+    try {
+        const response = await fetch('Namen/ganze Namen.txt');
+        if (!response.ok) {
+            throw new Error('Datei konnte nicht geladen werden');
+        }
+        const ganzeNamen = await response.text();
+        window.ganzeNamen = ganzeNamen.split('\n').map(name => name.trim()).filter(name => name.length > 0);
+        console.log(ganzeNamen); // Hier sind deine Daten
+    } catch (error) {
+        console.error('Fehler:', error);
+    }
+}
+// HIER MUSS ICH NOCHMAL RÜBER (24.2.)
+
+leseDatei();
+
 // Hilfsfunktion für eine zufällige ID
 const getPersistentId = () => {
   let id = localStorage.getItem('persistentPlayerId');
@@ -173,14 +190,33 @@ function handleCreateRoom() {
   }
 
 
+  function randomName() {
+    socketRef.current.emit('randomName', username, ({ success, name }) => {
+      if (success) {
+        setUsername(name);
+      } else {
+        setErrorMessage('Fehler beim Generieren eines zufälligen Namens');
+      }});
+  }
+
+
   function handleStartGame() {
     //hier bedingung einfügen, dass der host nur starten kann, wenn alle spieler eine rolle gewählt haben
-    if (currentRoom) {
-      socketRef.current.emit('startGame', { code: currentRoom.code }, ({ success, error }) => {
-        if (!success) {
-          setErrorMessage(`Spielstart fehlgeschlagen: ${error}`)
-        }
-      })
+    if (currentRoom && currentRoom.roomData.players.some(p => !p.team || !p.role)) {
+      setErrorMessage('Alle Spieler müssen eine Rolle auswählen, bevor das Spiel gestartet werden kann.');
+
+      setTimeout(() => {
+       setErrorMessage('');
+      }, 5000);
+
+      return;
+
+    } else {
+    socketRef.current.emit('startGame', { code: currentRoom.code }, ({ success, error }) => {
+      if (!success) {
+        setErrorMessage(`Spielstart fehlgeschlagen: ${error}`)
+      }
+    })
     }
   }
 
@@ -207,7 +243,7 @@ function handleCreateRoom() {
                   {p.isHost && <span style={{ marginLeft: 8 }}>👑</span>}
                   {p.team && p.role && (
                     <span style={{ marginLeft: 8, fontSize: 12 }}>
-                      ({p.team.toUpperCase()} • {roleLabels[p.role]})
+                      ({p.team === 'blue' ? 'BLAU' : 'ROT'}) • {roleLabels[p.role]}
                     </span>
                   )}
                   {!p.team && <span style={{ marginLeft: 8, fontSize: 12, color: '#999' }}>Noch keine Rolle gewählt</span>}
@@ -356,11 +392,25 @@ function handleCreateRoom() {
           Name:
           <input
             type="text"
-            value={username}
+            value={username || ""}
             onChange={(e) => setUsername(e.target.value)}
             style={{ marginLeft: 8, padding: 6, width: 200 }}
             placeholder="Max Mustermann"
           />
+          <button
+          style={{
+            padding: '6px 12px',
+            marginLeft: 8,
+            background: '#cfcfcf',
+            color: '#000',
+            border: 'none',
+            borderRadius: 4,
+            cursor: 'pointer'
+          }}
+          onClick={randomName}
+          >
+            zufälliger Name
+          </button>
         </label>
       </div>
 

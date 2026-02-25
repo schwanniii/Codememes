@@ -116,15 +116,12 @@ useEffect(() => {
 
   socket.on('updatePendingGuesses', (newPendingGuessIndex) => {
 
-    console.log("(Moin) PendingGuessIndex:", newPendingGuessIndex);
-
     setPendingGuessIndex(newPendingGuessIndex || []);
   });
 
 
 
   socket.on('spymasterAssignments', ({ assignments }) => {
-    console.log('🔥 FARBEN ERHALTEN:', assignments);
     setSpymasterAssignments(assignments);
   });
 
@@ -384,7 +381,7 @@ const handleGuessWord = (index, element) => {
   socketRef.current.emit('guessWord', { code: roomData.code, index }, (response) => {
     console.log("[DEBUG] Server Response erhalten:", response);
 
-    if (response.isCorrect) {
+    if (response.isCorrect === true) {
       console.log("[DEBUG] Konfetti wird gezündet!");
       const teamColor = roomData.gameState.currentTeam === 'blue' ? '#3f8cca' : '#e07171';
       fireConfettiAtElement(element, teamColor);
@@ -1040,7 +1037,7 @@ const handleEndTurn = () => {
                 {isDropdownOpen && (
                   <div style={{ position: 'absolute', left: 0, marginBottom: '10px', width: '240px', background: 'white', border: '1px solid #ddd', borderRadius: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', padding: '10px', zIndex: 100, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'unbegrenzt'].map((item) => (
-                      <div 
+                      <div id='dropdown_div'
                         key={item}
                         onClick={() => {
                           setSelectedNumber(item);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const GIPHY_API_KEY = "WOBF4g1aprBjQUbFMjRlH7Jgu55JZfFJ"; 
+const GIPHY_API_KEY = import.meta.env.VITE_GIPHY_API_KEY; 
 
 export default function GifPicker({ onGifSelect }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,7 +15,11 @@ export default function GifPicker({ onGifSelect }) {
     const url = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(searchTerm)}&limit=50&rating=g&lang=de`;
 
     try {
-      const res = await fetch(url);
+    const res = await fetch(url, {
+          method: 'GET',
+          headers: {}, // Leere Header erzwingen
+          mode: 'cors', // Explizit CORS verlangen
+        });
       const data = await res.json();
       
       if (data && data.data) {

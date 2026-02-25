@@ -5,6 +5,9 @@ import DiagnosticPanel from './components/DiagnosticPanel'
 import Lobby from './components/Lobby'
 import GameBoard from './components/GameBoard'
 
+console.log('DEBG-Alle Vite-Env-Variablen:', import.meta.env);
+console.log('Key:', import.meta.env.VITE_GIPHY_API_KEY); // Sollte den Wert aus .env anzeigen
+
 export default function App() {
   const [videos, setVideos] = useState([])
   const [gameStarted, setGameStarted] = useState(null)
@@ -55,15 +58,6 @@ export default function App() {
       <h1 style={{ fontSize: 32, fontWeight: 700, transform: 'translateX(2%)' }}>Codememes</h1>
       
       <Lobby onGameStart={handleGameStart} />
-      
-      {/* <details style={{ marginTop: 24, padding: 12, background: '#f0f0f0', borderRadius: 4 }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 600 }}>🔧 Debug & Test</summary>
-        <div style={{ marginTop: 12 }}>
-          <DiagnosticPanel />
-          <RealtimeDemo />
-          <VideoGrid videos={videos} />
-        </div>
-      </details> */}
     </div>
   )
 }
