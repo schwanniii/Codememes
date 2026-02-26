@@ -243,7 +243,10 @@ function handleCreateRoom() {
                   {p.isHost && <span style={{ marginLeft: 8 }}>👑</span>}
                   {p.team && p.role && (
                     <span style={{ marginLeft: 8, fontSize: 12 }}>
-                      ({p.team === 'blue' ? 'BLAU' : 'ROT'}) • {roleLabels[p.role]}
+                      ({p.team === 'blue' ? 'BLAU' : 'ROT'}) • 
+                      <span style={{ fontSize: p.role === 'spymaster' ? 13 : 12, fontWeight: p.role === 'spymaster' ? 500 : 400 }}>
+                        {roleLabels[p.role]}
+                      </span>
                     </span>
                   )}
                   {!p.team && <span style={{ marginLeft: 8, fontSize: 12, color: '#999' }}>Noch keine Rolle gewählt</span>}

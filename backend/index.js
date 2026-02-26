@@ -269,6 +269,11 @@ socket.on('joinRoomByCode', ({ code, username, persistentId }, callback) => {
   // Identitäts-Check: Existiert diese Person schon im Raum?
   let player = room.players.find(p => p.persistentId === persistentId);
 
+  if(room.players.find(p => p.username === username && p.persistentId !== persistentId )){
+    callback({ success: false, error: 'Benutzername bereits vergeben' });
+    return;
+  }
+
   if (player) {
     // FALL A: RECONNECT (Seite neu geladen)
     console.log(`♻️ Spieler ${username} kehrt zurück. Update Socket: ${player.id} -> ${socket.id}`);
@@ -320,12 +325,8 @@ socket.on('joinRoomByCode', ({ code, username, persistentId }, callback) => {
 socket.on('requestResetToLobby', ({ code }, callback) => {
   // normalize incoming code and make sure it's a string
   const roomCode = String(code || '').toUpperCase().trim();
-  console.log("requestResetToLobby called with", code, "-> normalized", roomCode);
-  console.log("existing room keys:", Array.from(rooms.keys()));
 
   const room = rooms.get(roomCode);
-  console.log("Found room:", room);
-  console.log(`🔄 Reset zum Raum: ${room ? '[found]' : '[not found]'} angefragt für Raum ${roomCode} von Socket ${socket.id}`);
 
   if (!room) {
     // nothing we can do
@@ -354,11 +355,11 @@ socket.on('requestResetToLobby', ({ code }, callback) => {
     round: 0
   };
 
-  // Spielerrollen/teams löschen, damit beim nächsten Start neu gewählt wird
-  room.players.forEach((p) => {
-    p.team = null;
-    p.role = null;
-  });
+  // Spielerrollen/teams löschen, damit beim nächsten Start neu gewählt wird //besser lassen
+  // room.players.forEach((p) => {
+  //   p.team = null;
+  //   p.role = null;
+  // });
 
   // 3. Allen im Raum (einschließlich Host) sagen, dass es zurück geht
   // Wir senden die aktualisierten roomData mit
