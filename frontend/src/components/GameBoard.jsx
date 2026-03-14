@@ -952,7 +952,6 @@ const handleEndTurn = () => {
       alignItems: 'center', 
       padding: '10px 0',
       position: 'relative',
-      border: '2px solid purple' 
     }}>
 
       
