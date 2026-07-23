@@ -33,19 +33,19 @@ try {
 }
 
 
-// === Ganze Namen ===
-let alleGanzeNamen = [];
-try {
-  const wordsPath = path.join(__dirname, '..', 'Namen', 'ganze Namen.txt');
-  const content = fs.readFileSync(wordsPath, 'utf-8');
-  alleGanzeNamen = content
-    .split('\n')
-    .map((w) => w.trim())
-    .filter((w) => w.length > 0);
-  console.log(`Loaded ${alleGanzeNamen.length} ganze Namen from ganze Namen.txt`);
-} catch (err) {
-  console.error('Error loading words:', err.message);
-}
+// // === Ganze Namen ===
+// let alleGanzeNamen = [];
+// try {
+//   const wordsPath = path.join(__dirname, '..', 'Namen', 'ganze Namen.txt');
+//   const content = fs.readFileSync(wordsPath, 'utf-8');
+//   alleGanzeNamen = content
+//     .split('\n')
+//     .map((w) => w.trim())
+//     .filter((w) => w.length > 0);
+//   console.log(`Loaded ${alleGanzeNamen.length} ganze Namen from ganze Namen.txt`);
+// } catch (err) {
+//   console.error('Error loading words:', err.message);
+// }
 
 
 // === Vornamen ===
@@ -78,7 +78,7 @@ try {
 }
 
 
-console.log("Insgesamt eladen: ", allWords.length, " Wörter,", alleGanzeNamen.length, " ganze Namen,", alleVornamen.length, " Vornamen und", alleNachnamen.length, " Nachnamen.");
+// console.log("Insgesamt eladen: ", allWords.length, " Wörter,", alleGanzeNamen.length, " ganze Namen,", alleVornamen.length, " Vornamen und", alleNachnamen.length, " Nachnamen.");
 
 
 // In-Memory Room Storage
@@ -197,22 +197,18 @@ io.on('connection', (socket) => {
   //zufälligen Namen generieren
   socket.on('randomName', (previousName, callback) => {
 
-  let username = "";
+    let username = "";
 
-  while (username === "" || username === previousName) {      
-    if (Math.random() >= 0.5) {
-        const randomVorname = alleVornamen[Math.floor(Math.random() * alleVornamen.length)];
-        const randomNachname = alleNachnamen[Math.floor(Math.random() * alleNachnamen.length)];
-        username = `${randomVorname || "keinVorname"} ${randomNachname || "keinNachname"}`;
-    } else {
-        username = alleGanzeNamen[Math.floor(Math.random() * alleGanzeNamen.length)] || "Max Mustermann";
+    while (username === "" || username === previousName) {
+      const randomVorname = alleVornamen[Math.floor(Math.random() * alleVornamen.length)];
+      const randomNachname = alleNachnamen[Math.floor(Math.random() * alleNachnamen.length)];
+      username = `${randomVorname || "keinVorname"} ${randomNachname || "keinNachname"}`;
     }
-  }
 
-  callback({
-    success: true,
-    name: username
-  });
+    callback({
+      success: true,
+      name: username
+    });
   
   });
 

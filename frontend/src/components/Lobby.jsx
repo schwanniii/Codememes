@@ -13,23 +13,6 @@ const teamColors = {
   blue: { bg: '#e3f2fd', border: '#1565c0', text: '#0d47a1' }
 }
 
-async function leseDatei() {
-    try {
-        const response = await fetch('Namen/ganze Namen.txt');
-        if (!response.ok) {
-            throw new Error('Datei konnte nicht geladen werden');
-        }
-        const ganzeNamen = await response.text();
-        window.ganzeNamen = ganzeNamen.split('\n').map(name => name.trim()).filter(name => name.length > 0);
-        console.log(ganzeNamen); // Hier sind deine Daten
-    } catch (error) {
-        console.error('Fehler:', error);
-    }
-}
-// HIER MUSS ICH NOCHMAL RÜBER (24.2.)
-
-leseDatei();
-
 // Hilfsfunktion für eine zufällige ID
 const getPersistentId = () => {
   let id = localStorage.getItem('persistentPlayerId');
